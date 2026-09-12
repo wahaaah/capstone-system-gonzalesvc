@@ -4,7 +4,7 @@ export interface Appointment {
   id?: number;
   appointment_id?: number;
   patient_id: number | string;
-  patient_name?: string; // Made optional since it's populated via GET join, not included during creation
+  patient_name?: string; //
   appointment_date: string;
   appointment_time: string;
   purpose_of_visit: string;

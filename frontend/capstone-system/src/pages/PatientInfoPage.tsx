@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react';
-import PatientDirectory from '../component/PatientDirectory'; // Note: check if it's 'component' or 'components' in your folder structure
+import PatientDirectory from '../component/PatientDirectory';
 import PatientHistory from '../component/PatientHistory';
 import { patientService, type Patient } from '../services/patientService';
 import { appointmentService, type Appointment } from '../services/appointmentService';
 
 interface PatientInfoPageProps {
   selectedPatientId: string | null;
-  // 1. NEW: We declare that this component expects an onBack function
   onBack: () => void;
 }
+
+// Helper function to keep date formatting clean and reusable
+const formatDate = (dateString?: string | null) => {
+  if (!dateString) return 'No visits';
+  return new Date(dateString).toLocaleDateString('en-US', { 
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+};
 
 export default function PatientInfoPage({ selectedPatientId, onBack }: PatientInfoPageProps) {
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -61,7 +70,7 @@ export default function PatientInfoPage({ selectedPatientId, onBack }: PatientIn
       {selectedPatientId ? (
 
         <div className="space-y-4">
-          {/* 2. The Back Button that triggers the reset in App.tsx */}
+          {/* Back Button */}
           <button
             onClick={onBack}
             className="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center"
@@ -79,7 +88,7 @@ export default function PatientInfoPage({ selectedPatientId, onBack }: PatientIn
             </div>
           ) : patient ? (
             <>
-              {/* 3. Real fetched patient data, not placeholder text */}
+              {/* Patient Data Card */}
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex justify-between items-center border-b pb-4 mb-4">
                   <div>
@@ -107,20 +116,19 @@ export default function PatientInfoPage({ selectedPatientId, onBack }: PatientIn
                   <div>
                     <p className="text-slate-500 text-xs uppercase font-bold">Last visit</p>
                     <p className="mt-1 text-slate-800">
-                      {patient.last_visit ? patient.last_visit.split('T')[0] : 'No visits recorded yet.'}
+                      {formatDate(patient.last_visit)}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Appointment history + prescription records — was built but never wired in before */}
+              {/* Appointment history + prescription records */}
               <PatientHistory patientId={patient.patient_id} allAppointments={appointments} />
             </>
           ) : null}
         </div>
 
       ) : (
-        /* If no ID is selected, show the full list */
         <PatientDirectory />
       )}
 

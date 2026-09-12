@@ -3,18 +3,33 @@ console.log('--- PATH DEBUGGER ---');
 console.log('Current File:', __filename);
 console.log('Looking for DB at:', path.resolve(__dirname, '../config/db.js'));
 
-
 const express = require('express');
 const router = express.Router();
-// Assuming this file is in a folder called 'routes', 
-// we go up one level to find the 'config' folder.
 const db = require('../config/db'); 
 
-// 1. READ ALL: Get all patient profiles
-// Note: The path is just '/' because server.js adds the '/api/patients' prefix
+// 1. READ ALL: Get all patient profiles with dynamic last visit calculation
 router.get('/', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM patients');
+        const query = `
+            SELECT 
+                p.*, 
+                COALESCE(v.last_visit, NULL) AS last_visit
+            FROM patients p
+            LEFT JOIN (
+                SELECT patient_id, MAX(visit_date) AS last_visit
+                FROM (
+                    SELECT patient_id, appointment_date AS visit_date 
+                    FROM appointments 
+                    WHERE appointment_status NOT IN ('Canceled', 'Cancelled')
+                    UNION ALL
+                    SELECT patient_id, created_at AS visit_date 
+                    FROM transactions
+                ) all_visits
+                GROUP BY patient_id
+            ) v ON p.patient_id = v.patient_id
+            ORDER BY p.name ASC
+        `;
+        const [rows] = await db.query(query);
         res.json(rows);
     } catch (error) {
         console.error('Error fetching patients:', error.message);
@@ -22,10 +37,29 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 1b. READ ONE: Get a single patient profile by ID (powers the Patient Profile detail view)
+// 1b. READ ONE: Get a single patient profile by ID with dynamic last visit calculation
 router.get('/:id', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM patients WHERE patient_id = ?', [req.params.id]);
+        const query = `
+            SELECT 
+                p.*, 
+                COALESCE(v.last_visit, NULL) AS last_visit
+            FROM patients p
+            LEFT JOIN (
+                SELECT patient_id, MAX(visit_date) AS last_visit
+                FROM (
+                    SELECT patient_id, appointment_date AS visit_date 
+                    FROM appointments 
+                    WHERE appointment_status NOT IN ('Canceled', 'Cancelled')
+                    UNION ALL
+                    SELECT patient_id, created_at AS visit_date 
+                    FROM transactions
+                ) all_visits
+                GROUP BY patient_id
+            ) v ON p.patient_id = v.patient_id
+            WHERE p.patient_id = ?
+        `;
+        const [rows] = await db.query(query, [req.params.id]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Patient not found.' });
         }
@@ -38,15 +72,15 @@ router.get('/:id', async (req, res) => {
 
 // 2. CREATE: Register a new patient account
 router.post('/', async (req, res) => {
-    const { patient_id, name, age, gender, contact, last_visit, status } = req.body;
+    const { patient_id, name, age, gender, contact, status } = req.body;
     try {
         const query = `
-            INSERT INTO patients (patient_id, name, age, gender, contact, last_visit, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO patients (patient_id, name, age, gender, contact, status) 
+            VALUES (?, ?, ?, ?, ?, ?)
         `;
-        await db.query(query, [patient_id, name, age, gender, contact, last_visit, status]);
+        await db.query(query, [patient_id, name, age, gender, contact, status || 'Active']);
         
-        res.status(201).json({ patient_id, name, age, gender, contact, last_visit, status });
+        res.status(201).json({ patient_id, name, age, gender, contact, status });
     } catch (error) {
         console.error('Error creating patient:', error.message);
         res.status(500).json({ error: error.message });
@@ -56,15 +90,15 @@ router.post('/', async (req, res) => {
 // 3. UPDATE: Modify an existing patient record
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, age, gender, contact, last_visit, status } = req.body;
+    const { name, age, gender, contact, status } = req.body;
     try {
         const query = `
             UPDATE patients 
-            SET name = ?, age = ?, gender = ?, contact = ?, last_visit = ?, status = ? 
+            SET name = ?, age = ?, gender = ?, contact = ?, status = ? 
             WHERE patient_id = ?
         `;
-        await db.query(query, [name, age, gender, contact, last_visit, status, id]);
-        res.json({ patient_id: id, name, age, gender, contact, last_visit, status });
+        await db.query(query, [name, age, gender, contact, status, id]);
+        res.json({ patient_id: id, name, age, gender, contact, status });
     } catch (error) {
         console.error('Error updating patient:', error.message);
         res.status(500).json({ error: error.message });
