@@ -21,6 +21,17 @@ export interface CartItem {
   item_type: 'product' | 'frame';
 }
 
+export interface TransactionItem {
+  id: number;
+  transaction_id: number;
+  quantity: number;
+  unit_price: number;
+  product_id: number | null;
+  frame_id: number | null;
+  item_name: string;
+  item_type: 'product' | 'frame';
+}
+
 export interface Transaction {
   id: number;
   appointment_id: number | null;
@@ -28,6 +39,7 @@ export interface Transaction {
   total_amount: number;
   payment_status: 'Pending' | 'Paid';
   created_at: string;
+  items?: TransactionItem[];
 }
 
 export interface PatientTransaction {
@@ -89,6 +101,12 @@ export const posService = {
   getTransactions: async (): Promise<Transaction[]> => {
     const response = await fetch(`${API_BASE}/transactions`);
     if (!response.ok) throw new Error('Failed to fetch transactions');
+    return response.json();
+  },
+
+  getTransactionItems: async (id: string | number): Promise<TransactionItem[]> => {
+    const response = await fetch(`${API_BASE}/transactions/${id}/items`);
+    if (!response.ok) throw new Error('Failed to fetch transaction items');
     return response.json();
   },
 

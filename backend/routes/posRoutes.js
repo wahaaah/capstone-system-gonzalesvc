@@ -165,7 +165,7 @@ router.delete('/products/:id', requireAuth(['admin']), async (req, res) => {
 // POST: Real checkout — handles both products and frames (appointment & walk-in)
 router.post('/checkout', async (req, res) => {
     const { appointment_id, items } = req.body;
-
+    
     if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: 'At least one cart item is required.' });
     }
