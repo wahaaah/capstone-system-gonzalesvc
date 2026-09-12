@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Calendar, Receipt, Layers, Package, ShieldCheck, Activity, type LucideIcon, LogOut } from 'lucide-react';
+import { Users, Calendar, Receipt, Layers, Package, ShieldCheck, FileText, Activity, type LucideIcon, LogOut } from 'lucide-react';
 
 import PatientInfoPage from './pages/PatientInfoPage';
 import SchedulingPage from './pages/SchedulingPage';
@@ -7,6 +7,7 @@ import PosPage from './pages/PosPage';
 import FrameConversionPage from './pages/FrameConversionPage';
 import ProductInventoryPage from './pages/ProductInventoryPage';
 import AccountManagementPage from './pages/AccountManagementPage';
+import { TransactionHistoryPage } from './pages/TransactionHistoryPage';
 import SystemMonitoringPage from './pages/SystemMonitoringPage';
 import LoginPage from './pages/LoginPage';
 import { authService, type AuthUser } from './services/authService';
@@ -25,6 +26,7 @@ const ADMIN_NAV: NavigationItem[] = [
   { id: 'patient-info', name: 'Patient information', icon: Users },
   { id: 'scheduling', name: 'Appointment scheduling', icon: Calendar },
   { id: 'pos', name: 'Point of Sale (POS)', icon: Receipt },
+  { id: 'transaction-history', name: 'Transaction history', icon: FileText },
   { id: 'frame-conversion', name: 'Frames inventory', icon: Layers },
   { id: 'product-inventory', name: 'Medical products inventory', icon: Package },
 ];
@@ -157,7 +159,7 @@ export default function App() {
           )}
 
           {currentView === 'pos' && currentUser.role === 'admin' && <PosPage />}
-
+          {currentView === 'transaction-history' && currentUser.role === 'admin' && <TransactionHistoryPage />}
           {currentView === 'product-inventory' && currentUser.role === 'admin' && <ProductInventoryPage />}
 
           {/* Shared between Admin and Staff */}
