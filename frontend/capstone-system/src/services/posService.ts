@@ -35,6 +35,7 @@ export interface TransactionItem {
 export interface Transaction {
   id: number;
   appointment_id: number | null;
+  patient_id?: number | null;
   customer_name?: string;
   total_amount: number;
   payment_status: 'Pending' | 'Paid';
@@ -45,6 +46,7 @@ export interface Transaction {
 export interface PatientTransaction {
   transaction_id: number;
   appointment_id: number | null;
+  patient_id?: number | null;
   total_amount: number;
   payment_status: 'Pending' | 'Paid';
   created_at: string;
@@ -134,6 +136,7 @@ export const posService = {
 
   checkout: async (
     appointmentId: number | string | null,
+    patientId: number | string | null,
     items: CartItem[]
   ): Promise<{ message: string; transactionId: number; totalAmount: number }> => {
     const response = await fetch(`${API_BASE}/checkout`, {
@@ -141,6 +144,7 @@ export const posService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         appointment_id: appointmentId,
+        patient_id: patientId,
         items: items.map((i) => ({
           product_id: i.product_id ?? null,
           frame_id: i.frame_id ?? null,

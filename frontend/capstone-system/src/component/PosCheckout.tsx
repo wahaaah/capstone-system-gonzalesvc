@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { posService, type CartItem } from '../services/posService';
 import { appointmentService, type Appointment } from '../services/appointmentService';
+import { patientService, type Patient } from '../services/patientService';
 import { frameService } from '../services/frameService';
-import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Search, X } from 'lucide-react';
 
 interface CatalogItem {
   cart_key: string;
@@ -17,15 +18,20 @@ interface CatalogItem {
 export default function PosCheckout() {
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>('');
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<string>('guest');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Search and dropdown state for customer selection
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+
   useEffect(() => {
     loadCatalog();
-    loadAppointments();
+    loadAppointmentsAndPatients();
   }, []);
 
   const loadCatalog = async () => {
@@ -61,12 +67,16 @@ export default function PosCheckout() {
     }
   };
 
-  const loadAppointments = async () => {
+  const loadAppointmentsAndPatients = async () => {
     try {
-      const data = await appointmentService.getAll();
-      setAppointments(data);
+      const [appointmentData, patientData] = await Promise.all([
+        appointmentService.getAll(),
+        patientService.getAll(),
+      ]);
+      setAppointments(appointmentData);
+      setPatients(patientData);
     } catch (err) {
-      setErrorMessage('Failed to load appointments.');
+      setErrorMessage('Failed to load customer profiles.');
     }
   };
 
@@ -120,14 +130,27 @@ export default function PosCheckout() {
 
     setIsProcessing(true);
     try {
-      const appointmentParam = selectedAppointmentId !== '' ? selectedAppointmentId : null;
-      const result = await posService.checkout(appointmentParam, cart);
+      let appointmentParam: number | null = null;
+      let patientParam: string | null = null; // Change type to string | null
+
+      if (selectedCustomer.startsWith('appointment:')) {
+        const id = Number(selectedCustomer.split(':')[1]);
+        if (!isNaN(id)) appointmentParam = id;
+      } else if (selectedCustomer.startsWith('patient:')) {
+        const idStr = selectedCustomer.split(':')[1];
+        if (idStr) patientParam = idStr; // Keep as string ('GVC-1548')
+      }
+
+      console.log('Checking out with:', { appointmentParam, patientParam }); // Check your browser console to verify!
+
+      const result = await posService.checkout(appointmentParam, patientParam, cart);
 
       setSuccessMessage(
         `Transaction #${result.transactionId} recorded — total ₱${result.totalAmount.toFixed(2)}.`
       );
       setCart([]);
-      setSelectedAppointmentId('');
+      setSelectedCustomer('guest');
+      setCustomerSearchQuery('');
       loadCatalog();
     } catch (err: any) {
       setErrorMessage(err.message || 'Checkout failed.');
@@ -147,9 +170,42 @@ export default function PosCheckout() {
       return nameA.localeCompare(nameB);
     });
 
+  const sortedPatients = [...patients].sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '')
+  );
+
+  const query = customerSearchQuery.toLowerCase().trim();
+
+  const filteredPatients = sortedPatients.filter((patient) =>
+    (patient.name || '').toLowerCase().includes(query)
+  );
+
+  const filteredAppointments = validAppointments.filter((appt) => {
+    const displayName = (appt.patient_name || `Patient #${appt.patient_id}`).toLowerCase();
+    const apptIdStr = String(appt.appointment_id);
+    const dateStr = (appt.appointment_date || '').toLowerCase();
+    return displayName.includes(query) || apptIdStr.includes(query) || dateStr.includes(query);
+  });
+
+  const getSelectedCustomerLabel = () => {
+    if (selectedCustomer === 'guest') return '🛒 Walk-in / Guest Customer (No Appointment)';
+    if (selectedCustomer.startsWith('patient:')) {
+      const idStr = selectedCustomer.split(':')[1];
+      const found = patients.find((p) => String(p.patient_id) === idStr);
+      return found ? `👤 ${found.name} (Direct Purchase)` : 'Selected Patient';
+    }
+    if (selectedCustomer.startsWith('appointment:')) {
+      const idStr = selectedCustomer.split(':')[1];
+      const found = appointments.find((a) => String(a.appointment_id) === idStr);
+      if (!found) return 'Selected Appointment';
+      const displayName = found.patient_name || `Patient #${found.patient_id}`;
+      return `📅 Appt #${found.appointment_id} — ${displayName} (${found.appointment_date})`;
+    }
+    return 'Select Customer / Appointment';
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Catalog */}
       <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5">
         <h3 className="text-sm font-semibold text-slate-700 mb-4">Product & Frame Catalog</h3>
         {catalog.length === 0 ? (
@@ -184,29 +240,114 @@ export default function PosCheckout() {
         )}
       </div>
 
-      {/* Cart */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col">
         <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
           <ShoppingCart size={16} /> Cart
         </h3>
 
-        <label className="text-xs font-medium text-slate-500 mb-1 block">Customer / Appointment </label>
+        <label className="text-xs font-medium text-slate-500 mb-1 block">Customer / Appointment</label>
         
-        <select
-          value={selectedAppointmentId}
-          onChange={(e) => setSelectedAppointmentId(e.target.value)}
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4"
-        >
-          <option value="">🛒 Walk-in / Guest Customer (No Appointment)</option>
-          {validAppointments.map((appt) => {
-            const displayName = appt.patient_name || `Patient #${appt.patient_id}`;
-            return (
-              <option key={appt.appointment_id} value={appt.appointment_id}>
-                {displayName} — Appt #{appt.appointment_id} ({appt.appointment_date})
-              </option>
-            );
-          })}
-        </select>
+        <div className="relative mb-4">
+          <div
+            onClick={() => setIsCustomerDropdownOpen(true)}
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white cursor-pointer flex items-center justify-between text-slate-700"
+          >
+            <span className="truncate">{getSelectedCustomerLabel()}</span>
+            <Search size={14} className="text-slate-400 shrink-0 ml-2" />
+          </div>
+
+          {isCustomerDropdownOpen && (
+            <div className="absolute top-0 left-0 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 flex flex-col max-h-80">
+              <div className="p-2 border-b border-slate-100 flex items-center gap-2">
+                <Search size={14} className="text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Search patient or appointment..."
+                  value={customerSearchQuery}
+                  onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                  className="w-full text-sm outline-none bg-transparent"
+                />
+                {customerSearchQuery && (
+                  <button onClick={() => setCustomerSearchQuery('')} className="text-slate-400 hover:text-slate-600">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div className="overflow-y-auto flex-1 p-1">
+                <div
+                  onClick={() => {
+                    setSelectedCustomer('guest');
+                    setCustomerSearchQuery('');
+                    setIsCustomerDropdownOpen(false);
+                  }}
+                  className="px-3 py-2 text-sm hover:bg-slate-50 rounded cursor-pointer text-slate-700"
+                >
+                  🛒 Walk-in / Guest Customer (No Appointment)
+                </div>
+
+                {filteredPatients.length > 0 && (
+                  <div className="mt-1">
+                    <p className="px-3 py-1 text-[10px] font-bold uppercase text-slate-400 tracking-wider">Direct Existing Patients</p>
+               {filteredPatients.map((patient: any) => {
+  const patientId = patient.patient_id ?? patient.id;
+  return (
+    <div
+      key={`patient-${patientId}`}
+      onClick={() => {
+        console.log('Resolved patient ID:', patientId, 'Full object:', patient);
+        setSelectedCustomer(`patient:${patientId}`);
+        setCustomerSearchQuery('');
+        setIsCustomerDropdownOpen(false);
+      }}
+      className="px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-600 rounded cursor-pointer text-slate-700"
+    >
+      👤 {patient.name} (Direct Purchase)
+    </div>
+  );
+})}
+                  </div>
+                )}
+
+                {filteredAppointments.length > 0 && (
+                  <div className="mt-1">
+                    <p className="px-3 py-1 text-[10px] font-bold uppercase text-slate-400 tracking-wider">Scheduled Appointments</p>
+                    {filteredAppointments.map((appt) => {
+                      const displayName = appt.patient_name || `Patient #${appt.patient_id}`;
+                      return (
+                        <div
+                          key={`appt-${appt.appointment_id}`}
+                          onClick={() => {
+                            setSelectedCustomer(`appointment:${appt.appointment_id}`);
+                            setCustomerSearchQuery('');
+                            setIsCustomerDropdownOpen(false);
+                          }}
+                          className="px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-600 rounded cursor-pointer text-slate-700"
+                        >
+                          📅 Appt #{appt.appointment_id} — {displayName} ({appt.appointment_date})
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {filteredPatients.length === 0 && filteredAppointments.length === 0 && (
+                  <p className="text-xs text-slate-400 text-center py-4">No matching records found.</p>
+                )}
+              </div>
+
+              <div className="p-2 border-t border-slate-100 flex justify-end">
+                <button
+                  onClick={() => setIsCustomerDropdownOpen(false)}
+                  className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="flex-1 space-y-2 mb-4 overflow-y-auto max-h-72">
           {cart.length === 0 ? (

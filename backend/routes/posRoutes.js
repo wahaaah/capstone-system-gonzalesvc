@@ -3,20 +3,22 @@ const router = express.Router();
 const db = require('../config/db');
 const { requireAuth } = require('./authRoutes');
 
-// GET: Fetch all transactions (Includes patient/customer name for walk-ins)
+// GET: Fetch all transactions (Includes patient/customer name for direct patients and walk-ins)
 router.get('/transactions', async (req, res) => {
     try {
         const query = `
             SELECT 
                 t.id,
                 t.appointment_id,
+                t.patient_id,
                 t.total_amount,
                 t.payment_status,
                 t.created_at,
-                COALESCE(p.name, 'Walk-in / Guest') AS customer_name
+                COALESCE(p_direct.name, p_appt.name, 'Walk-in / Guest') AS customer_name
             FROM transactions t
             LEFT JOIN appointments a ON t.appointment_id = a.appointment_id
-            LEFT JOIN patients p ON a.patient_id = p.patient_id
+            LEFT JOIN patients p_appt ON a.patient_id = p_appt.patient_id
+            LEFT JOIN patients p_direct ON t.patient_id = p_direct.patient_id
             ORDER BY t.created_at DESC
         `;
         const [rows] = await db.query(query);
@@ -50,6 +52,7 @@ router.get('/pos/patient/:patient_id', async (req, res) => {
             SELECT 
                 t.id AS transaction_id,
                 t.appointment_id,
+                t.patient_id,
                 t.total_amount,
                 t.payment_status,
                 t.created_at,
@@ -60,17 +63,18 @@ router.get('/pos/patient/:patient_id', async (req, res) => {
             LEFT JOIN transaction_items ti ON t.id = ti.transaction_id
             LEFT JOIN products p ON ti.product_id = p.id
             LEFT JOIN frames f ON ti.frame_id = f.frame_id
-            WHERE a.patient_id = ?
+            WHERE a.patient_id = ? OR t.patient_id = ?
             GROUP BY 
                 t.id, 
                 t.appointment_id, 
+                t.patient_id,
                 t.total_amount, 
                 t.payment_status, 
                 t.created_at, 
                 a.purpose_of_visit
             ORDER BY t.created_at DESC
         `;
-        const [rows] = await db.query(query, [patient_id]);
+        const [rows] = await db.query(query, [patient_id, patient_id]);
         res.json(rows);
     } catch (error) {
         console.error('❌ Error fetching patient transactions:', error.message);
@@ -162,20 +166,32 @@ router.delete('/products/:id', requireAuth(['admin']), async (req, res) => {
     }
 });
 
-// POST: Real checkout — handles both products and frames (appointment & walk-in)
+// POST: Real checkout — handles both products and frames (appointment, direct patient, & walk-in)
 router.post('/checkout', async (req, res) => {
-    const { appointment_id, items } = req.body;
+    let { appointment_id, patient_id, items } = req.body;
     
     if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: 'At least one cart item is required.' });
     }
 
-    const appointmentIdValue = appointment_id ? Number(appointment_id) : null;
-
     let connection;
     try {
         connection = await db.getConnection();
         await connection.beginTransaction();
+
+        // If an appointment_id is provided but patient_id is missing, auto-fetch patient_id from the appointment
+        if (appointment_id && !patient_id) {
+            const [apptRows] = await connection.query(
+                'SELECT patient_id FROM appointments WHERE appointment_id = ?',
+                [appointment_id]
+            );
+            if (apptRows.length > 0 && apptRows[0].patient_id) {
+                patient_id = apptRows[0].patient_id;
+            }
+        }
+
+        const appointmentIdValue = appointment_id ? Number(appointment_id) : null;
+        const patientIdValue = patient_id ? patient_id : null; // <-- Do NOT wrap in Number() since IDs are strings
 
         const totalAmount = items.reduce(
             (sum, item) => sum + Number(item.unit_price) * Number(item.quantity),
@@ -183,8 +199,8 @@ router.post('/checkout', async (req, res) => {
         );
 
         const [transResult] = await connection.query(
-            'INSERT INTO transactions (appointment_id, total_amount, payment_status) VALUES (?, ?, ?)',
-            [appointmentIdValue, totalAmount, 'Paid']
+            'INSERT INTO transactions (appointment_id, patient_id, total_amount, payment_status) VALUES (?, ?, ?, ?)',
+            [appointmentIdValue, patientIdValue, totalAmount, 'Paid']
         );
         const transactionId = transResult.insertId;
 
