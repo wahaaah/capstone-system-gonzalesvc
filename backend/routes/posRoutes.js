@@ -108,7 +108,8 @@ router.get('/transactions/:id/items', async (req, res) => {
                 CASE 
                     WHEN ti.frame_id IS NOT NULL THEN 'frame'
                     ELSE 'product'
-                END AS item_type
+                END AS item_type,
+                COALESCE(p.image_url, f.image_2d_url) AS image_url
             FROM transaction_items ti
             LEFT JOIN products p ON ti.product_id = p.id
             LEFT JOIN frames f ON ti.frame_id = f.frame_id

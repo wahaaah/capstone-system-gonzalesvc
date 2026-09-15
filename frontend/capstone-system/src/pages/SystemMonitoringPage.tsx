@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { monitoringService, type MonitoringStats } from '../services/monitoringService';
-import { Users, Calendar, Receipt, Glasses, Package, AlertTriangle } from 'lucide-react';
+import { Users, Calendar, Receipt, Glasses, Package, AlertTriangle, TrendingUp, DollarSign, CalendarDays } from 'lucide-react';
 
 export default function SystemMonitoringPage() {
   const [stats, setStats] = useState<MonitoringStats | null>(null);
@@ -58,6 +58,36 @@ export default function SystemMonitoringPage() {
         ))}
       </div>
 
+      {/* Revenue Breakdown Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-2">
+            <DollarSign size={18} className="text-emerald-500" />
+            <span className="text-[10px] font-bold uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Today</span>
+          </div>
+          <p className="text-2xl font-bold text-slate-900">₱{Number(stats.todayRevenue || 0).toFixed(2)}</p>
+          <p className="text-xs text-slate-400 mt-1">Revenue collected today</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-2">
+            <CalendarDays size={18} className="text-blue-500" />
+            <span className="text-[10px] font-bold uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded">This Month</span>
+          </div>
+          <p className="text-2xl font-bold text-slate-900">₱{Number(stats.monthRevenue || 0).toFixed(2)}</p>
+          <p className="text-xs text-slate-400 mt-1">Revenue for current month</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-2">
+            <TrendingUp size={18} className="text-indigo-500" />
+            <span className="text-[10px] font-bold uppercase text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">All-Time</span>
+          </div>
+          <p className="text-2xl font-bold text-blue-600">₱{Number(stats.totalRevenue || 0).toFixed(2)}</p>
+          <p className="text-xs text-slate-400 mt-1">Across {stats.totalTransactions} recorded transactions</p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <h3 className="text-sm font-semibold text-slate-700 mb-3">Accounts by role</h3>
@@ -74,26 +104,20 @@ export default function SystemMonitoringPage() {
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Revenue (all transactions)</h3>
-          <p className="text-2xl font-bold text-blue-600">₱{Number(stats.totalRevenue).toFixed(2)}</p>
-          <p className="text-xs text-slate-400 mt-1">Across {stats.totalTransactions} recorded transactions</p>
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">Recent appointment activity</h3>
+          {stats.recentActivity.length === 0 ? (
+            <p className="text-xs text-slate-400">No recent activity.</p>
+          ) : (
+            <div className="space-y-2">
+              {stats.recentActivity.map((item) => (
+                <div key={`${item.type}-${item.id}`} className="flex items-center justify-between text-sm border-b border-slate-50 pb-2">
+                  <span className="text-slate-600">Appointment #{item.id} — {item.reference}</span>
+                  <span className="text-xs text-slate-400">{new Date(item.created_at).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">Recent appointment activity</h3>
-        {stats.recentActivity.length === 0 ? (
-          <p className="text-xs text-slate-400">No recent activity.</p>
-        ) : (
-          <div className="space-y-2">
-            {stats.recentActivity.map((item) => (
-              <div key={`${item.type}-${item.id}`} className="flex items-center justify-between text-sm border-b border-slate-50 pb-2">
-                <span className="text-slate-600">Appointment #{item.id} — {item.reference}</span>
-                <span className="text-xs text-slate-400">{new Date(item.created_at).toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { posService } from '../services/posService';
-import { Search, Eye, X, Receipt } from 'lucide-react';
+import { Search, Eye, X, Receipt, Glasses } from 'lucide-react';
 
 interface TransactionItem {
   id: string | number;
@@ -8,6 +8,8 @@ interface TransactionItem {
   quantity: number;
   unit_price: number;
   item_type?: string;
+  image_url?: string | null;
+  image_2d_url?: string | null;
 }
 
 interface Transaction {
@@ -20,6 +22,16 @@ interface Transaction {
   items?: TransactionItem[];
   payment_status?: string;
 }
+
+const SERVER_HOST = 'http://127.0.0.1:5000';
+
+const formatImageUrl = (url?: string | null): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
+    return url;
+  }
+  return `${SERVER_HOST}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 export const TransactionHistoryPage: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -209,13 +221,32 @@ export const TransactionHistoryPage: React.FC = () => {
                           <td colSpan={3} className="px-4 py-6 text-center text-slate-400 text-xs">Loading item details...</td>
                         </tr>
                       ) : activeTransaction.items && activeTransaction.items.length > 0 ? (
-                        activeTransaction.items.map((item, idx) => (
-                          <tr key={idx}>
-                            <td className="px-4 py-2 text-slate-800">{item.item_name || 'Optical Item'}</td>
-                            <td className="px-4 py-2 text-center text-slate-600">{item.quantity}</td>
-                            <td className="px-4 py-2 text-right text-slate-800 font-medium">₱{Number(item.unit_price).toFixed(2)}</td>
-                          </tr>
-                        ))
+                        activeTransaction.items.map((item, idx) => {
+                          const itemImage = item.image_url || item.image_2d_url;
+                          return (
+                            <tr key={idx}>
+                              <td className="px-4 py-2 text-slate-800 flex items-center space-x-3">
+                                <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
+                                  {itemImage ? (
+                                    <img
+                                      src={formatImageUrl(itemImage)}
+                                      alt={item.item_name || 'Item'}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                      }}
+                                    />
+                                  ) : (
+                                    <Glasses size={16} className="text-slate-400" />
+                                  )}
+                                </div>
+                                <span className="line-clamp-2">{item.item_name || 'Optical Item'}</span>
+                              </td>
+                              <td className="px-4 py-2 text-center text-slate-600 whitespace-nowrap">{item.quantity}</td>
+                              <td className="px-4 py-2 text-right text-slate-800 font-medium whitespace-nowrap">₱{Number(item.unit_price).toFixed(2)}</td>
+                            </tr>
+                          );
+                        })
                       ) : (
                         <tr>
                           <td colSpan={3} className="px-4 py-4 text-center text-slate-400 text-xs">No items found for this transaction.</td>

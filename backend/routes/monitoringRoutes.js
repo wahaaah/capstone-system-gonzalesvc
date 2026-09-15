@@ -4,8 +4,6 @@ const db = require('../config/db.js');
 const { requireAuth } = require('./authRoutes');
 
 // GET /api/monitoring/stats — Super-Admin only: system-wide monitoring snapshot.
-// This is the read-only "monitoring" half of the Super-Admin role (the other half,
-// account maintenance, lives in authRoutes' /users endpoints).
 router.get('/stats', requireAuth(['super_admin']), async (req, res) => {
     try {
         const [[{ totalPatients }]] = await db.query('SELECT COUNT(*) AS totalPatients FROM patients');
@@ -13,9 +11,17 @@ router.get('/stats', requireAuth(['super_admin']), async (req, res) => {
         const [[{ appointmentsToday }]] = await db.query(
             'SELECT COUNT(*) AS appointmentsToday FROM appointments WHERE appointment_date = CURDATE()'
         );
-        const [[{ totalTransactions, totalRevenue }]] = await db.query(
-            `SELECT COUNT(*) AS totalTransactions, COALESCE(SUM(total_amount), 0) AS totalRevenue FROM transactions`
+        
+        // Updated to include total, today's, and this month's revenue in a single efficient query
+        const [[{ totalTransactions, totalRevenue, todayRevenue, monthRevenue }]] = await db.query(
+            `SELECT 
+                COUNT(*) AS totalTransactions, 
+                COALESCE(SUM(total_amount), 0) AS totalRevenue,
+                COALESCE(SUM(CASE WHEN DATE(created_at) = CURDATE() THEN total_amount ELSE 0 END), 0) AS todayRevenue,
+                COALESCE(SUM(CASE WHEN MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) THEN total_amount ELSE 0 END), 0) AS monthRevenue
+             FROM transactions`
         );
+
         const [[{ totalFrames }]] = await db.query('SELECT COUNT(*) AS totalFrames FROM frames');
         const [[{ totalProducts }]] = await db.query('SELECT COUNT(*) AS totalProducts FROM products');
         const [[{ lowStockProducts }]] = await db.query(
@@ -35,6 +41,8 @@ router.get('/stats', requireAuth(['super_admin']), async (req, res) => {
             appointmentsToday,
             totalTransactions,
             totalRevenue,
+            todayRevenue,     // <--- Added
+            monthRevenue,    // <--- Added
             totalFrames,
             totalProducts,
             lowStockProducts,

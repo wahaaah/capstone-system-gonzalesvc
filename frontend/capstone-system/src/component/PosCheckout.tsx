@@ -3,7 +3,7 @@ import { posService, type CartItem } from '../services/posService';
 import { appointmentService, type Appointment } from '../services/appointmentService';
 import { patientService, type Patient } from '../services/patientService';
 import { frameService } from '../services/frameService';
-import { ShoppingCart, Plus, Minus, Trash2, Search, X } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Search, X, Glasses } from 'lucide-react';
 
 interface CatalogItem {
   cart_key: string;
@@ -13,7 +13,18 @@ interface CatalogItem {
   price: number;
   stock_quantity: number;
   item_type: 'product' | 'frame';
+  image_url?: string | null;
 }
+
+const SERVER_HOST = 'http://127.0.0.1:5000';
+
+const formatImageUrl = (url?: string | null): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
+    return url;
+  }
+  return `${SERVER_HOST}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 export default function PosCheckout() {
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -41,7 +52,7 @@ export default function PosCheckout() {
         frameService.getAll(),
       ]);
 
-      const productItems: CatalogItem[] = products.map((p) => ({
+      const productItems: CatalogItem[] = products.map((p: any) => ({
         cart_key: `product-${p.id}`,
         raw_id: p.id,
         name: p.name,
@@ -49,9 +60,10 @@ export default function PosCheckout() {
         price: Number(p.price),
         stock_quantity: p.stock_quantity,
         item_type: 'product',
+        image_url: p.image_url || p.image || null,
       }));
 
-      const frameItems: CatalogItem[] = frames.map((f) => ({
+      const frameItems: CatalogItem[] = frames.map((f: any) => ({
         cart_key: `frame-${f.frame_id}`,
         raw_id: f.frame_id,
         name: f.brand ? `${f.brand} - ${f.name}` : f.name,
@@ -59,6 +71,7 @@ export default function PosCheckout() {
         price: Number(f.price),
         stock_quantity: f.stock_quantity,
         item_type: 'frame',
+        image_url: f.image_2d_url || f.image_url || null,
       }));
 
       setCatalog([...frameItems, ...productItems]);
@@ -131,17 +144,15 @@ export default function PosCheckout() {
     setIsProcessing(true);
     try {
       let appointmentParam: number | null = null;
-      let patientParam: string | null = null; // Change type to string | null
+      let patientParam: string | null = null;
 
       if (selectedCustomer.startsWith('appointment:')) {
         const id = Number(selectedCustomer.split(':')[1]);
         if (!isNaN(id)) appointmentParam = id;
       } else if (selectedCustomer.startsWith('patient:')) {
         const idStr = selectedCustomer.split(':')[1];
-        if (idStr) patientParam = idStr; // Keep as string ('GVC-1548')
+        if (idStr) patientParam = idStr;
       }
-
-      console.log('Checking out with:', { appointmentParam, patientParam }); // Check your browser console to verify!
 
       const result = await posService.checkout(appointmentParam, patientParam, cart);
 
@@ -217,23 +228,48 @@ export default function PosCheckout() {
                 key={item.cart_key}
                 onClick={() => addToCart(item)}
                 disabled={item.stock_quantity <= 0}
-                className="text-left p-3 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed relative"
+                className="text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden flex flex-col bg-white"
               >
-                <div className="flex items-start justify-between gap-1">
-                  <p className="text-sm font-medium text-slate-800 line-clamp-1">{item.name}</p>
+                {/* Image Thumbnail Area */}
+                <div className="h-28 bg-slate-100 relative flex items-center justify-center overflow-hidden border-b border-slate-100">
+                  {item.image_url ? (
+                    <img
+                      src={formatImageUrl(item.image_url)}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <Glasses size={20} className="text-slate-300" />
+                  )}
                   <span
-                    className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                      item.item_type === 'frame' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                    className={`absolute top-2 right-2 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm ${
+                      item.item_type === 'frame'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-blue-600 text-white'
                     }`}
                   >
                     {item.item_type}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">{item.category}</p>
-                <p className="text-sm font-semibold text-blue-600 mt-1">
-                  ₱{item.price.toFixed(2)}
-                </p>
-                <p className="text-xs text-slate-400">Stock: {item.stock_quantity}</p>
+
+                {/* Details Area */}
+                <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-800 line-clamp-1">{item.name}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{item.category}</p>
+                  </div>
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-50">
+                    <p className="text-xs font-bold text-blue-600">
+                      ₱{item.price.toFixed(2)}
+                    </p>
+                    <p className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                      Stock: {item.stock_quantity}
+                    </p>
+                  </div>
+                </div>
               </button>
             ))}
           </div>
@@ -290,23 +326,22 @@ export default function PosCheckout() {
                 {filteredPatients.length > 0 && (
                   <div className="mt-1">
                     <p className="px-3 py-1 text-[10px] font-bold uppercase text-slate-400 tracking-wider">Direct Existing Patients</p>
-               {filteredPatients.map((patient: any) => {
-  const patientId = patient.patient_id ?? patient.id;
-  return (
-    <div
-      key={`patient-${patientId}`}
-      onClick={() => {
-        console.log('Resolved patient ID:', patientId, 'Full object:', patient);
-        setSelectedCustomer(`patient:${patientId}`);
-        setCustomerSearchQuery('');
-        setIsCustomerDropdownOpen(false);
-      }}
-      className="px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-600 rounded cursor-pointer text-slate-700"
-    >
-      👤 {patient.name} (Direct Purchase)
-    </div>
-  );
-})}
+                    {filteredPatients.map((patient: any) => {
+                      const patientId = patient.patient_id ?? patient.id;
+                      return (
+                        <div
+                          key={`patient-${patientId}`}
+                          onClick={() => {
+                            setSelectedCustomer(`patient:${patientId}`);
+                            setCustomerSearchQuery('');
+                            setIsCustomerDropdownOpen(false);
+                          }}
+                          className="px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-600 rounded cursor-pointer text-slate-700"
+                        >
+                          👤 {patient.name} (Direct Purchase)
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 

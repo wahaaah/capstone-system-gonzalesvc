@@ -20,6 +20,8 @@ export interface MonitoringStats {
   appointmentsToday: number;
   totalTransactions: number;
   totalRevenue: number;
+  todayRevenue: number;     
+  monthRevenue: number;    
   totalFrames: number;
   totalProducts: number;
   lowStockProducts: number;

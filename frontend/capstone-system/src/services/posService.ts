@@ -30,6 +30,8 @@ export interface TransactionItem {
   frame_id: number | null;
   item_name: string;
   item_type: 'product' | 'frame';
+  image_url?: string | null;       
+  image_2d_url?: string | null;    
 }
 
 export interface Transaction {

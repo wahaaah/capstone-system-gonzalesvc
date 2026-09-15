@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { frameService, type Frame } from '../services/frameService';
-import { UploadCloud, ImagePlus, Box, X, Sparkles, Pencil, Trash2, Plus, RefreshCw } from 'lucide-react';
+import { UploadCloud, ImagePlus, Box, X, Sparkles, Pencil, Trash2, Plus, RefreshCw, Search } from 'lucide-react';
 
 interface FrameUploaderProps {
   onCreated: () => void;
@@ -24,6 +24,10 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
   const [frames, setFrames] = useState<Frame[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  // Search & Filter States
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL', '2D Only', '3D Ready'
 
   // Form states
   const [name, setName] = useState('');
@@ -192,7 +196,7 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
 
     try {
       const formData = new FormData();
-      formData.append('file', file); // Assuming Flask accepts 'file' for both images and models
+      formData.append('file', file); 
       const resp = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
       if (!resp.ok) throw new Error('GLB Upload failed');
       const data = await resp.json();
@@ -250,6 +254,21 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
       setIsSaving(false);
     }
   };
+
+  // Filtered frames logic
+  const filteredFrames = frames.filter((frame) => {
+    const matchesSearch = 
+      (frame.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+      (frame.brand?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    
+    const is3D = !!frame.model_3d_url;
+    const matchesStatus = 
+      statusFilter === 'ALL' || 
+      (statusFilter === '3D Ready' && is3D) || 
+      (statusFilter === '2D Only' && !is3D);
+
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6">
@@ -393,15 +412,48 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
 
       {/* Frame Selectable List Table */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-slate-700">Frame Catalog Items ({frames.length})</h4>
-          <button onClick={loadFrames} className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1">
-            <RefreshCw size={12} className={isLoadingCatalog ? 'animate-spin' : ''} /> Refresh
-          </button>
+        
+        {/* Header & Controls Bar */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <h4 className="text-sm font-semibold text-slate-700">
+            Frame Catalog Items ({filteredFrames.length} {filteredFrames.length !== dataLengthMessage(frames.length) && `of ${frames.length}`})
+          </h4>
+          
+          {/* Search Bar & Status Filter */}
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-60">
+              <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+                <Search size={14} />
+              </span>
+              <input
+                type="text"
+                placeholder="Search by name or brand..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="2D Only">2D Only</option>
+              <option value="3D Ready">3D Ready</option>
+            </select>
+
+            <button onClick={loadFrames} className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 p-1.5 border border-slate-200 rounded-lg bg-slate-50/50 hover:bg-slate-100">
+              <RefreshCw size={12} className={isLoadingCatalog ? 'animate-spin' : ''} />
+            </button>
+          </div>
         </div>
 
-        {frames.length === 0 ? (
-          <p className="text-xs text-slate-400 py-4 text-center">No frame items available in catalog.</p>
+        {filteredFrames.length === 0 ? (
+          <p className="text-xs text-slate-400 py-6 text-center">
+            {frames.length === 0 ? 'No frame items available in catalog.' : 'No frames match your search or filter criteria.'}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
@@ -416,7 +468,7 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {frames.map((frame) => {
+                {filteredFrames.map((frame) => {
                   const isSelected = editingId === frame.frame_id;
                   const rawImg = frame.image_2d_url || frame.image_url;
                   const imgUrl = formatImageUrl(rawImg);
@@ -473,4 +525,9 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
       )}
     </div>
   );
+}
+
+// Small helper for dynamic count messaging
+function dataLengthMessage(len: number) {
+  return len;
 }
