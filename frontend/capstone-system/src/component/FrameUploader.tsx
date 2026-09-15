@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { frameService, type Frame } from '../services/frameService';
 import { UploadCloud, ImagePlus, Box, X, Sparkles, Pencil, Trash2, Plus, RefreshCw, Search } from 'lucide-react';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 interface FrameUploaderProps {
   onCreated: () => void;
@@ -8,7 +10,7 @@ interface FrameUploaderProps {
 
 const API_BASE = 'http://127.0.0.1:5000/api';
 const SERVER_HOST = 'http://127.0.0.1:5000';
-const MAX_FILE_SIZE_MB = 15; // Increased slightly to accommodate 3D models
+const MAX_FILE_SIZE_MB = 15; 
 
 // Helper to construct complete URLs for relative backend paths
 const formatImageUrl = (url?: string | null): string => {
@@ -55,6 +57,11 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [showFullImageModal, setShowFullImageModal] = useState(false);
 
+  // Try-on feature states
+  const [isTryOnOpen, setIsTryOnOpen] = useState(false);
+  const [activeTryOnUrl, setActiveTryOnUrl] = useState<string | null>(null);
+  const [vtoStatus, setVtoStatus] = useState('Initializing face detection...');
+
   // Load catalog items
   const loadFrames = useCallback(async () => {
     setIsLoadingCatalog(true);
@@ -80,6 +87,135 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
       }
     };
   }, [imagePreview]);
+
+  // Virtual Try-On Lifecycle Effect (Three.js + Face-API)
+  useEffect(() => {
+    if (!isTryOnOpen || !activeTryOnUrl) return;
+
+    let currentStream: MediaStream | null = null;
+    let animationFrameId: number;
+    let detectionInterval: number;
+
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
+
+    // Setup Three.js Scene
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, modalContainer.clientWidth / modalContainer.clientHeight, 0.1, 100);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(modalContainer.clientWidth, modalContainer.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    modalContainer.appendChild(renderer.domElement);
+
+    camera.position.set(0, 0, 10);
+    camera.lookAt(0, 0, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(1, 1, 1).normalize();
+    scene.add(dirLight);
+
+    let loadedModel: THREE.Group | null = null;
+    const loader = new GLTFLoader();
+
+    const animate = () => {
+      animationFrameId = requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    // Load Face-API models and GLTF Frame
+    const initTryOn = async () => {
+      try {
+        setVtoStatus('Loading face detection models...');
+        await Promise.all([
+          (window as any).faceapi.nets.ssdMobilenetv1.loadFromUri('./models'),
+          (window as any).faceapi.nets.faceLandmark68Net.loadFromUri('./models'),
+        ]);
+
+        setVtoStatus('Accessing webcam...');
+        currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+        const video = document.createElement('video');
+        video.srcObject = currentStream;
+        video.play();
+
+        const videoTexture = new THREE.VideoTexture(video);
+        const plane = new THREE.Mesh(
+          new THREE.PlaneGeometry(20, 20),
+          new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide })
+        );
+        plane.position.set(0, 0, -5);
+        scene.add(plane);
+
+        loader.load(activeTryOnUrl, (gltf) => {
+          loadedModel = gltf.scene;
+          loadedModel.scale.set(0.1, 0.1, 0.1);
+          loadedModel.rotation.y = Math.PI;
+          loadedModel.position.set(-5, 0, -5);
+          scene.add(loadedModel);
+          setVtoStatus('Ready — looking for face landmarks');
+        });
+
+        video.addEventListener('playing', () => {
+          const displaySize = { width: video.videoWidth, height: video.videoHeight };
+
+          detectionInterval = setInterval(async () => {
+            if (!loadedModel) return;
+            const detections = await (window as any).faceapi.detectAllFaces(video).withFaceLandmarks();
+
+            if (detections.length > 0) {
+              const detection = detections[0];
+              const leftEye = detection.landmarks.getLeftEye();
+              const rightEye = detection.landmarks.getRightEye();
+
+              const centerX = (leftEye[0].x + rightEye[0].x) / 2;
+              const centerY = (leftEye[0].y + rightEye[0].y) / 2;
+
+              // Screen to World Coordinates conversion mapping
+              const x = (centerX / displaySize.width) * 2 - 1;
+              const y = -(centerY / displaySize.height) * 2 + 1;
+              const vector = new THREE.Vector3(x, y, 0.5);
+              vector.unproject(camera);
+              const dir = vector.sub(camera.position).normalize();
+              const distance = -camera.position.z / dir.z;
+              const worldCenter = camera.position.clone().add(dir.multiplyScalar(distance));
+
+              loadedModel.position.set(worldCenter.x, worldCenter.y - 1, worldCenter.z);
+
+              const deltaY = rightEye[0].y - leftEye[0].y;
+              const deltaX = rightEye[0].x - leftEye[0].x;
+              loadedModel.rotation.z = Math.atan2(deltaY, deltaX);
+
+              const eyeDist = Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
+              const scaleFactor = eyeDist / 200;
+              if (!isNaN(scaleFactor) && scaleFactor > 0) {
+                loadedModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+              }
+            }
+          }, 100);
+        });
+      } catch (err) {
+        console.error('VTO Error:', err);
+        setVtoStatus('Camera access denied or model load failed.');
+      }
+    };
+
+    initTryOn();
+
+    // Cleanup on close
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      clearInterval(detectionInterval);
+      if (currentStream) {
+        currentStream.getTracks().forEach((track) => track.stop());
+      }
+      if (renderer.domElement && modalContainer.contains(renderer.domElement)) {
+        modalContainer.removeChild(renderer.domElement);
+      }
+      renderer.dispose();
+    };
+  }, [isTryOnOpen, activeTryOnUrl]);
 
   const clearImage = () => {
     if (imagePreview && imagePreview.startsWith('blob:')) {
@@ -220,7 +356,6 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
 
     setIsSaving(true);
     
-    // Dynamic Conversion Status: Converted if GLB exists, otherwise Pending
     const currentConversionStatus: Frame['conversion_status'] = uploadedGlbUrl 
     ? 'Converted' 
     : 'Not Converted';
@@ -416,7 +551,7 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
         {/* Header & Controls Bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h4 className="text-sm font-semibold text-slate-700">
-            Frame Catalog Items ({filteredFrames.length} {filteredFrames.length !== dataLengthMessage(frames.length) && `of ${frames.length}`})
+            Frame Catalog Items ({filteredFrames.length} {filteredFrames.length !== frames.length && `of ${frames.length}`})
           </h4>
           
           {/* Search Bar & Status Filter */}
@@ -499,6 +634,22 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
                       <td className="py-2 px-3 font-semibold text-slate-700">₱{Number(frame.price).toLocaleString()}</td>
                       <td className="py-2 px-3 text-slate-500">{frame.stock_quantity}</td>
                       <td className="py-2 px-3 text-right space-x-1" onClick={(e) => e.stopPropagation()}>
+                        {is3D && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const fullModelUrl = frame.model_3d_url!.startsWith('http')
+                                ? frame.model_3d_url!
+                                : `${SERVER_HOST}${frame.model_3d_url!.startsWith('/') ? '' : '/'}${frame.model_3d_url!}`;
+                              setActiveTryOnUrl(fullModelUrl);
+                              setIsTryOnOpen(true);
+                            }}
+                            className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md"
+                            title="Test Virtual Try-On"
+                          >
+                            <Box size={14} />
+                          </button>
+                        )}
                         <button type="button" onClick={() => handleSelectFrame(frame)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md" title="Edit frame"><Pencil size={14} /></button>
                         <button type="button" onClick={(e) => handleDeleteFrame(frame.frame_id, e)} className="p-1.5 text-red-500 hover:bg-red-100 rounded-md" title="Delete frame"><Trash2 size={14} /></button>
                       </td>
@@ -511,23 +662,68 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
         )}
       </div>
 
+      {/* Virtual Try-On Modal */}
+      {isTryOnOpen && (
+        <div 
+          id="faceFilterModal" 
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setIsTryOnOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-2xl w-full p-5 relative shadow-2xl flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Sparkles size={16} className="text-emerald-600" /> Live Virtual Try-On Test
+                </h3>
+                <p id="vto-status" className="text-xs text-slate-500 mt-0.5">{vtoStatus}</p>
+              </div>
+              <button 
+                onClick={() => setIsTryOnOpen(false)} 
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Three.js Render Target Container */}
+            <div 
+              id="modal-container" 
+              className="relative w-full h-[400px] bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center border border-slate-200 shadow-inner"
+            />
+
+            <div className="mt-4 flex justify-end w-full">
+              <button
+                type="button"
+                onClick={() => setIsTryOnOpen(false)}
+                className="bg-slate-900 text-white text-xs font-medium px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Full Image Modal */}
       {showFullImageModal && imagePreview && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowFullImageModal(false)}>
           <div className="relative bg-white rounded-2xl max-w-md w-full p-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-slate-600">Image High-Res Preview</span>
-              <button onClick={() => setShowFullImageModal(false)} className="p-1 rounded-full text-slate-400 hover:text-slate-600"><X size={18} /></button>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-xs font-semibold text-slate-700">Image Preview</h3>
+              <button onClick={() => setShowFullImageModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X size={16} />
+              </button>
             </div>
-            <img src={imagePreview} alt="Full High Res Preview" className="w-full max-h-[60vh] object-contain rounded-lg border border-slate-100" />
+            <img src={imagePreview} alt="Full Preview" className="w-full h-auto rounded-lg object-contain max-h-[70vh]" />
           </div>
         </div>
       )}
     </div>
+    
   );
 }
 
-// Small helper for dynamic count messaging
-function dataLengthMessage(len: number) {
-  return len;
-}
+
