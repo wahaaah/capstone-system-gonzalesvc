@@ -21,6 +21,7 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: var(--text);
       background: var(--white);
+      overflow-x: hidden;
     }
 
     /* ── NAVBAR ── */
@@ -28,127 +29,90 @@
       position: sticky; top: 0; z-index: 100;
       background: var(--white);
       border-bottom: 1px solid #e2e8f0;
-      padding: 0 2rem;
+      padding: 0 1.5rem;
       display: flex; align-items: center; justify-content: space-between;
       height: 64px;
     }
     .nav-logo {
-      font-size: 1.2rem; font-weight: 700; color: var(--blue); text-decoration: none;
+      font-size: 1.1rem; font-weight: 700; color: var(--blue); text-decoration: none;
     }
-    .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links { display: flex; gap: 1.2rem; align-items: center; }
     .nav-links a {
-      text-decoration: none; color: var(--text-muted); font-size: 0.9rem;
+      text-decoration: none; color: var(--text-muted); font-size: 0.85rem;
       transition: color 0.2s;
     }
     .nav-links a:hover { color: var(--blue); }
     .btn-login {
       background: var(--blue); color: white !important;
-      padding: 0.5rem 1.2rem; border-radius: 8px; font-size: 0.85rem;
+      padding: 0.45rem 1rem; border-radius: 8px; font-size: 0.8rem;
     }
     .btn-login:hover { background: var(--blue-dark) !important; }
+
+    @media(max-width: 640px) {
+      .hide-mobile { display: none; }
+    }
 
     /* ── HERO ── */
     .hero {
       background: linear-gradient(135deg, var(--blue) 0%, #1e40af 100%);
       color: white;
-      padding: 5rem 2rem;
+      padding: 4rem 1.5rem;
       text-align: center;
     }
     .hero h1 { font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 800; margin-bottom: 1rem; }
-    .hero p  { font-size: 1.1rem; opacity: 0.85; max-width: 520px; margin: 0 auto 2rem; }
+    .hero p  { font-size: 1rem; opacity: 0.85; max-width: 520px; margin: 0 auto 2rem; }
     .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
     .btn-hero {
-      padding: 0.8rem 2rem; border-radius: 10px; font-weight: 600;
-      font-size: 1rem; cursor: pointer; text-decoration: none; display: inline-block;
+      padding: 0.75rem 1.75rem; border-radius: 10px; font-weight: 600;
+      font-size: 0.95rem; cursor: pointer; text-decoration: none; display: inline-block;
       transition: all 0.2s;
     }
-    .btn-hero-primary {
-      background: white; color: var(--blue);
-    }
+    .btn-hero-primary { background: white; color: var(--blue); }
     .btn-hero-primary:hover { background: #e0f2fe; }
-    .btn-hero-outline {
-      border: 2px solid rgba(255,255,255,0.6); color: white;
-    }
+    .btn-hero-outline { border: 2px solid rgba(255,255,255,0.6); color: white; }
     .btn-hero-outline:hover { border-color: white; background: rgba(255,255,255,0.1); }
 
-    /* ── SECTION TITLES ── */
-    .section { padding: 4rem 2rem; max-width: 1100px; margin: 0 auto; }
-    .section-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem; }
-    .section-sub { color: var(--text-muted); margin-bottom: 2rem; }
+    /* ── SECTION LAYOUT ── */
+    .section { padding: 3.5rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+    .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .section-sub { color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem; }
 
     /* ── FILTER CONTROLS ── */
     .filter-controls {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
+      display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;
     }
-
     @media (min-width: 640px) {
-      .filter-controls {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-      }
+      .filter-controls { flex-direction: row; align-items: center; justify-content: space-between; }
     }
-
     #searchInput {
-      padding: 0.65rem 1rem;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      font-size: 0.875rem;
-      width: 100%;
-      max-width: 320px;
-      outline: none;
+      padding: 0.65rem 1rem; border: 1px solid #cbd5e1; border-radius: 10px;
+      font-size: 0.875rem; width: 100%; max-width: 320px; outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-
     #searchInput:focus {
-      border-color: var(--blue);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     }
-
-    .category-pills {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
+    .category-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .pill-btn {
-      padding: 0.5rem 1.1rem;
-      border-radius: 20px;
-      border: 1px solid #cbd5e1;
-      background: white;
-      color: var(--text-muted);
-      font-size: 0.825rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
+      padding: 0.45rem 1rem; border-radius: 20px; border: 1px solid #cbd5e1;
+      background: white; color: var(--text-muted); font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
     }
-
-    .pill-btn:hover {
-      border-color: var(--blue);
-      color: var(--blue);
-    }
-
-    .pill-btn.active {
-      background: var(--blue);
-      color: white;
-      border-color: var(--blue);
-    }
+    .pill-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .pill-btn.active { background: var(--blue); color: white; border-color: var(--blue); }
 
     /* ── STATUS BAR ── */
     #vto-status {
       background: var(--blue-light); color: var(--blue);
       border: 1px solid #bfdbfe; border-radius: 8px;
-      padding: 0.75rem 1rem; font-size: 0.875rem;
+      padding: 0.75rem 1rem; font-size: 0.85rem;
       margin-bottom: 1.5rem; text-align: center;
     }
 
     /* ── FRAME GRID ── */
     #frame-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 1.25rem;
     }
     .frame-card {
@@ -159,52 +123,124 @@
     }
     .frame-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-2px); }
     .frame-img-box {
-      width: 100%; height: 150px; background: var(--slate);
+      width: 100%; height: 140px; background: var(--slate);
       display: flex; align-items: center; justify-content: center;
       padding: 0.75rem; border-bottom: 1px solid #f1f5f9;
     }
-    .frame-card img {
-      max-width: 100%; max-height: 100%; object-fit: contain;
-      display: block;
-    }
-    .frame-card h4 { padding: 0.75rem 0.75rem 0; font-size: 0.95rem; font-weight: 700; color: var(--text); }
+    .frame-card img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+    .frame-card h4 { padding: 0.75rem 0.75rem 0; font-size: 0.9rem; font-weight: 700; color: var(--text); }
     .frame-card p  { padding: 0.25rem 0.75rem 0; font-size: 0.8rem; color: var(--text-muted); }
-    .price         { color: var(--blue) !important; font-weight: 700 !important; font-size: 0.95rem !important; margin-top: 0.25rem; }
+    .price         { color: var(--blue) !important; font-weight: 700 !important; font-size: 0.9rem !important; margin-top: 0.25rem; }
     
     .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.75rem; }
     .btn-secondary {
       background: #f1f5f9; color: var(--text); border: 1px solid #cbd5e1;
-      padding: 0.55rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      padding: 0.5rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600;
       cursor: pointer; transition: background 0.2s;
     }
     .btn-secondary:hover { background: #e2e8f0; }
     .try-on-btn {
-      padding: 0.55rem; background: var(--blue); color: white;
-      border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      padding: 0.5rem; background: var(--blue); color: white;
+      border: none; border-radius: 8px; font-size: 0.75rem; font-weight: 600;
       cursor: pointer; transition: background 0.2s;
     }
     .try-on-btn:hover { background: var(--blue-dark); }
 
     /* ── FEATURES ── */
     .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1.5rem;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;
     }
-    .feature-card {
-      background: var(--slate); border-radius: 14px; padding: 1.5rem;
-    }
-    .feature-icon { font-size: 2rem; margin-bottom: 0.75rem; }
-    .feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
-    .feature-card p { font-size: 0.875rem; color: var(--text-muted); }
+    .feature-card { background: var(--slate); border-radius: 14px; padding: 1.25rem; }
+    .feature-icon { font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .feature-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .feature-card p { font-size: 0.825rem; color: var(--text-muted); line-height: 1.4; }
 
-    /* ── CTA STRIP ── */
-    .cta-strip {
-      background: var(--blue); color: white;
-      text-align: center; padding: 3rem 2rem;
+    /* ── MEET THE DOCTOR SECTION ── */
+    .doctor-section {
+      background: var(--slate); 
+      border-radius: 16px; 
+      border: 1px solid #e2e8f0;
+      display: grid; 
+      grid-template-columns: 320px 1fr; gap: 2.5rem; 
+      align-items: center;
+      padding: 2.5rem; 
+      margin-bottom: 3rem;
     }
-    .cta-strip h2 { font-size: 1.5rem; margin-bottom: 0.75rem; }
-    .cta-strip p  { opacity: 0.85; margin-bottom: 1.5rem; }
+    @media(max-width: 768px) {
+      .doctor-section { grid-template-columns: 1fr; padding: 1.5rem; text-align: center; }
+    }
+    .doctor-img-box {
+      width: 100%; 
+      height: 340px; 
+      border-radius: 12px; 
+      background: transparent; 
+      overflow: hidden;
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      border: none;
+    }
+    .doctor-img-box img { 
+      width: 100%; 
+      height: 100%; 
+      object-fit: cover;     
+      object-position: top center; 
+      display: block; 
+    }
+    .doctor-highlights {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    @media(max-width: 500px) { .doctor-highlights { grid-template-columns: 1fr; } }
+    .highlight-pill {
+      background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.6rem 0.8rem;
+      font-size: 0.8rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    /* ── LOCATION & GOOGLE MAPS SECTION ── */
+    .location-container {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;
+      background: var(--slate); border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden;
+    }
+    @media(max-width: 768px) {
+      .location-container { grid-template-columns: 1fr; }
+    }
+    .location-info { padding: 2rem; }
+    .location-info h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .location-info p { font-size: 0.875rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1rem; }
+    .map-embed { width: 100%; height: 320px; border: 0; }
+
+    /* ── MOBILE APP / QR CODE BANNER SECTION ── */
+    .app-banner {
+      background: linear-gradient(135deg, var(--blue-light) 0%, #e0f2fe 100%);
+      border: 1px solid #bfdbfe;
+      border-radius: 16px;
+      padding: 2.5rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 2rem;
+      align-items: center;
+      margin-bottom: 3rem;
+    }
+    @media(max-width: 768px) {
+      .app-banner { grid-template-columns: 1fr; text-align: center; }
+      .app-qr-box { margin: 0 auto; }
+    }
+    .app-banner-content h3 { font-size: 1.35rem; font-weight: 700; color: var(--blue-dark); margin-bottom: 0.5rem; }
+    .app-banner-content p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; max-width: 500px; }
+    .app-qr-box {
+      background: white;
+      padding: 1rem;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.08);
+      width: 140px;
+    }
+    .app-qr-box img { width: 100px; height: 100px; display: block; margin: 0 auto 0.4rem; }
+    .app-qr-box span { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* ── FOOTER ── */
     footer {
@@ -221,47 +257,36 @@
     }
     .modal-content {
       position: relative; margin: auto;
-      width: 90%; max-width: 800px;
+      width: 92%; max-width: 750px;
       background: white; border-radius: 16px; overflow: hidden;
       display: flex; flex-direction: column;
       box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
     }
     .modal-header {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 1rem 1.5rem;
-      background: var(--blue); color: white;
-      flex-shrink: 0;
+      padding: 1rem 1.25rem; background: var(--blue); color: white; flex-shrink: 0;
     }
-    .modal-header h2 { font-size: 1.1rem; font-weight: 700; }
-    .close {
-      font-size: 1.5rem; cursor: pointer; line-height: 1;
-      background: none; border: none; color: white;
-    }
+    .modal-header h2 { font-size: 1rem; font-weight: 700; }
+    .close { font-size: 1.4rem; cursor: pointer; line-height: 1; background: none; border: none; color: white; }
     .close:hover { opacity: 0.7; }
     
-    /* VTO Specific Canvas Container */
-    #modal-container { flex: 1; height: 75vh; overflow: hidden; }
+    #modal-container { flex: 1; height: 70vh; overflow: hidden; }
     #modal-container canvas { display: block; width: 100% !important; height: 100% !important; }
 
-    /* Detail Preview Modal Layout */
     .preview-body {
-      padding: 1.75rem;
-      display: grid; grid-template-columns: 1fr 1fr; gap: 1.75rem;
-      align-items: center;
+      padding: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center;
     }
-    @media (max-width: 640px) {
+    @media (max-width: 600px) {
       .preview-body { grid-template-columns: 1fr; }
     }
     .preview-img-holder {
-      background: var(--slate); border-radius: 12px; height: 220px;
-      display: flex; align-items: center; justify-content: center;
-      border: 1px solid #e2e8f0; padding: 1rem;
+      background: var(--slate); border-radius: 12px; height: 200px;
+      display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; padding: 1rem;
     }
     .preview-img-holder img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .preview-info h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem; }
-    .preview-info .price-tag { color: var(--blue); font-size: 1.2rem; font-weight: 800; margin-bottom: 1rem; }
-    .preview-info p { font-size: 0.875rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1.5rem; }
-    .preview-actions { display: flex; gap: 0.75rem; }
+    .preview-info h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .preview-info .price-tag { color: var(--blue); font-size: 1.1rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .preview-info p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1.25rem; }
   </style>
 </head>
 
@@ -272,36 +297,31 @@
     <a class="nav-logo" href="#">👓 Gonzales Vision Clinic</a>
     <div class="nav-links">
       <a href="#try-on">Virtual Try-On</a>
-      <a href="#features">Why Us</a>
-      <a href="#contact">Contact</a>
-      <a class="btn-login" href="http://localhost:5173" target="_blank">Staff / Admin Login</a>
+      <a href="#doctor" class="hide-mobile">Our Doctor</a>
+      <a href="#location" class="hide-mobile">Location</a>
+      <a class="btn-login" href="#download-app" >Download the App</a>
     </div>
   </nav>
 
-  <!-- HERO -->
+  <!-- HERO SECTION -->
   <section class="hero">
     <h1>See Yourself in the Perfect Frame</h1>
-    <p>Try on eyeglasses virtually using your webcam — no account needed. 
-       Browse our full collection and find your look before you visit.</p>
+    <p>Try on eyeglasses virtually using your live camera feed — no app installation or account required.</p>
     <div class="hero-btns">
-      <a class="btn-hero btn-hero-primary" href="#try-on">Try On Now</a>
-      <a class="btn-hero btn-hero-outline" href="http://localhost:5173" target="_blank">Book Appointment</a>
+      <a class="btn-hero btn-hero-primary" href="#try-on">Start Virtual Try-On</a>
+      <a class="btn-hero btn-hero-outline" href="#download-app">Get Mobile App</a>
     </div>
   </section>
 
-  <!-- TRY-ON SECTION -->
+  <!-- TRY-ON CATALOG SECTION -->
   <div id="try-on">
     <div class="section">
       <h2 class="section-title">Virtual Eyewear Try-On</h2>
-      <p class="section-sub">Click any frame below to try it on with your camera — no sign-in required.</p>
+      <p class="section-sub">Select any frame below to check how it looks on your face in real-time.</p>
 
       <!-- SEARCH & CATEGORY FILTERS -->
       <div class="filter-controls">
-        <input 
-          type="text" 
-          id="searchInput" 
-          placeholder="Search frames by name or brand..." 
-        />
+        <input type="text" id="searchInput" placeholder="Search frames by name or brand..." />
         <div class="category-pills" id="categoryPills">
           <button class="pill-btn active" data-category="All">All</button>
           <button class="pill-btn" data-category="Men">Men</button>
@@ -311,51 +331,113 @@
         </div>
       </div>
 
-      <div id="vto-status">Loading face detection models… (first load takes a moment)</div>
+      <div id="vto-status">Loading face tracking models…</div>
 
-      <!-- Frame cards populated dynamically from /api/frames by scripts.js -->
+      <!-- Dynamically populated from backend scripts.js -->
       <div id="frame-grid">
         <p style="color:#64748b;padding:1rem 0;">Loading available frames…</p>
       </div>
     </div>
   </div>
 
-  <!-- FEATURES -->
-  <section id="features" style="background:#f8fafc; padding: 1px 0;">
+  <!-- FEATURES SECTION -->
+  <section id="features" style="background:#f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
     <div class="section">
-      <h2 class="section-title">Why Gonzales Vision Clinic?</h2>
-      <p class="section-sub">Your eyecare, made easy.</p>
+      <h2 class="section-title">Clinic Highlights</h2>
+      <p class="section-sub">State-of-the-art vision care meets modern web technology.</p>
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-icon">📷</div>
-          <h3>Live Face Tracking</h3>
-          <p>Real-time face detection places 3D frames exactly where glasses would sit on your face.</p>
+          <h3>Precise 3D Try-On</h3>
+          <p>Powered by computer vision to map frames directly to your facial landmarks.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">🚫</div>
-          <h3>No Account Required</h3>
-          <p>Browse and try on any frame in our catalog as a guest — zero sign-up needed.</p>
+          <div class="feature-icon">⚡</div>
+          <h3>Multi-Platform Ready</h3>
+          <p>Seamlessly integrated with our mobile application via quick webview deep links.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">📅</div>
-          <h3>Easy Booking</h3>
-          <p>Found a frame you love? Book an appointment online and we'll have it ready for you.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">👁️</div>
-          <h3>Full Eye Care</h3>
-          <p>Prescriptions, consultations, fittings — all managed by our professional staff.</p>
+          <h3>Online Scheduling</h3>
+          <p>Book checkups and frame fittings directly through our mobile application.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- CTA -->
-  <section class="cta-strip" id="contact">
-    <h2>Ready to Visit Us?</h2>
-    <p>Book an appointment online or walk in — we'd love to see you.</p>
-    <a class="btn-hero btn-hero-primary" href="http://localhost:5173" target="_blank">Book an Appointment</a>
-  </section>
+  <!-- MEET THE DOCTOR SECTION -->
+  <div class="section" id="doctor">
+    <h2 class="section-title">Meet Our Resident Optometrist</h2>
+    <p class="section-sub">Dedicated to providing comprehensive eye care and personalized vision solutions.</p>
+
+    <div class="doctor-section">
+      <div class="doctor-img-box">
+        <!-- Replace src with your actual doctor profile image file path or URL -->
+        <img src="gonzales.jpg" alt="Dr. Gonzales" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'1\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>';" style="width: 80%;" />
+      </div>
+      <div class="doctor-bio">
+        <h3>Dr. Marvin H. Gonzales, OD</h3>
+        <div class="doctor-credential" style="font-size: 0.85rem; color: var(--blue); font-weight: 600; margin-bottom: 0.75rem;">Doctor of Optometry — Principal Practitioner</div>
+        <p style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.25rem;">
+          With over a decade of clinical experience, Dr. Gonzales specializes in comprehensive eye examinations, advanced vision correction, pediatric optometry, and precise fitting of specialized corrective lenses. Committed to staying at the forefront of eye care innovation.
+        </p>
+        
+        <div class="doctor-highlights">
+          <div class="highlight-pill">✨ 10+ Years Experience</div>
+          <div class="highlight-pill">🎓 Board Certified Optometrist</div>
+          <div class="highlight-pill">🔬 Advanced Vision Screening</div>
+          <div class="highlight-pill">👓 Custom Lens Specialist</div>
+        </div>
+
+        <a class="btn-hero btn-hero-primary" style="padding: 0.6rem 1.25rem; font-size: 0.85rem;" href="#download-app">Book Consultation with Dr. Gonzales</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOCATION & GOOGLE MAPS SECTION -->
+  <div class="section" id="location">
+    <h2 class="section-title">Visit Our Clinic</h2>
+    <p class="section-sub">Drop by for physical frame fittings, eye checkups, and consultations.</p>
+    
+    <div class="location-container">
+      <div class="location-info">
+        <h3>Gonzales Vision Clinic</h3>
+        <p>
+          We are open daily to serve your eye care needs. Visit our branch for complete eye examinations, prescription checks, and expert frame adjustments.
+        </p>
+        <p>
+          <strong>Operating Hours:</strong> Monday – Saturday, 9:00 AM – 6:00 PM<br>
+          <strong>Contact Support:</strong> gonzalesopticallab@gmail.com
+        </p>
+        <a class="btn-hero btn-hero-primary" style="padding: 0.6rem 1.25rem; font-size: 0.85rem;" href="#download-app">Book Appointment</a>
+      </div>
+      <div>
+        <!-- Embedded Google Maps View -->
+        <iframe 
+          class="map-embed"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d281.268702143372!2d121.04303257399484!3d14.777252608157012!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397af0021c2f0ed%3A0xd3fbf0bf6477ce8b!2sGonzales%20Vision%20Clinic!5e0!3m2!1sen!2sph!4v1789663203438!5m2!1sen!2sph"
+          allowfullscreen="" 
+          loading="lazy" 
+          referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOWNLOAD MOBILE APP / QR CODE SECTION -->
+  <div class="section" id="download-app">
+    <div class="app-banner">
+      <div class="app-banner-content">
+        <h3>Book Your Appointments via Our Mobile App</h3>
+        <p>To schedule checkups, track your prescription records, and secure your consultations with Dr. Gonzales, please download the official Gonzales Vision Clinic mobile app on your smartphone.</p>
+      </div>
+      <div class="app-qr-box">
+        <!-- Generates a quick scannable QR code linking to your app download URL or APK -->
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=http://localhost:5000/download" alt="App Download QR Code" />
+        <span>Scan to Download</span>
+      </div>
+    </div>
+  </div>
 
   <footer>
     © 2026 Gonzales Vision Clinic. All rights reserved.
@@ -375,16 +457,14 @@
         <div class="preview-info">
           <h3 id="previewModalTitle">Frame Name</h3>
           <div class="price-tag" id="previewModalPrice">₱0.00</div>
-          <p id="previewModalDesc">No detailed description available for this frame.</p>
-          <div class="preview-actions">
-            <button id="previewTryOnBtn" class="try-on-btn" style="padding: 0.75rem 1.25rem;">Try On 3D</button>
-          </div>
+          <p id="previewModalDesc">No description provided.</p>
+          <button id="previewTryOnBtn" class="try-on-btn" style="padding: 0.6rem 1.2rem;">Try On 3D</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- VTO MODAL (rendered by scripts.js) -->
+  <!-- VTO MODAL -->
   <div id="faceFilterModal" class="modal">
     <div class="modal-content" style="height: 80vh;">
       <div class="modal-header">
@@ -395,10 +475,27 @@
     </div>
   </div>
 
-  <!-- Three.js + GLTFLoader + face-api + try-on logic -->
+  <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script defer src="./face-api.min.js"></script>
   <script defer src="./scripts.js" type="module"></script>
+
+  <!-- MOBILE WEBVIEW QUERY PARAM LISTENER -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetFrameId = urlParams.get('frameId');
+
+      if (targetFrameId) {
+        const checkExist = setInterval(() => {
+          if (typeof window.openTryOnModal === 'function') {
+            window.openTryOnModal(targetFrameId);
+            clearInterval(checkExist);
+          }
+        }, 500);
+      }
+    });
+  </script>
 </body>
 </html>
