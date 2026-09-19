@@ -446,12 +446,12 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
                     
                     {booking ? (
                       <div>
-                        <button 
-                          onClick={() => onNavigate('patient-info', booking.patient_id)} 
-                          className="text-xs font-bold text-blue-600 hover:underline"
-                        >
-                          {patientMap.get(booking.patient_id) || booking.patient_id}
-                        </button>
+                        <button
+  onClick={() => onNavigate('patient-info', String(booking.patient_id))}
+  className="text-xs font-bold text-blue-600 hover:underline"
+>
+  {patientMap.get(String(booking.patient_id)) || booking.patient_id}
+</button>
                         <div className="text-[10px] text-slate-500 truncate max-w-[120px]">{booking.purpose_of_visit}</div>
                       </div>
                     ) : (
@@ -617,7 +617,7 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
                 incomingRequests.map((req) => {
                   const timeMatch = standardTimeSlots.find(s => s.raw.substring(0, 5) === req.appointment_time?.substring(0, 5));
                   const displayTime = timeMatch ? timeMatch.display : req.appointment_time;
-                  const patientDisplayName = patientMap.get(req.patient_id) || req.patient_id;
+                  const patientDisplayName = patientMap.get(String(req.patient_id)) || req.patient_id;
 
                   return (
                     <div key={req.id || req.appointment_id} className="p-3 rounded-lg border border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
@@ -666,7 +666,7 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
                 <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                   <Pencil size={16} className="text-blue-600" /> Edit appointment
                 </h4>
-                <p className="text-[11px] text-slate-400">{patientMap.get(editingAppointment.patient_id) || editingAppointment.patient_id}</p>
+                <p className="text-[11px] text-slate-400">{patientMap.get(String(editingAppointment.patient_id)) || editingAppointment.patient_id}</p>
               </div>
               <button onClick={closeEditModal} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100">
                 <X size={16} />
