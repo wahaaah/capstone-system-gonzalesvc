@@ -16,7 +16,7 @@ export interface CreateAppointmentResponse {
   appointmentId: number;
 }
 
-const API_BASE = 'http://127.0.0.1:5000/api';
+const API_BASE = 'https://gonzalesvisionclinic.onrender.com';
 
 export const appointmentService = {
   // Fetch all active appointments (returns patient_name via LEFT JOIN)

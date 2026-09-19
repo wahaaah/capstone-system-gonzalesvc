@@ -23,7 +23,7 @@ interface Transaction {
   payment_status?: string;
 }
 
-const SERVER_HOST = 'http://127.0.0.1:5000';
+const SERVER_HOST = 'https://gonzalesvisionclinic.onrender.com';
 
 const formatImageUrl = (url?: string | null): string => {
   if (!url) return '';
