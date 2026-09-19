@@ -3,7 +3,7 @@ import { posService, type Product } from '../services/posService';
 import { Package, ImageOff, Pencil, Trash2, ImagePlus, X, RefreshCw } from 'lucide-react';
 
 const API_BASE = 'https://gonzalesvisionclinic.onrender.com';
-const SERVER_HOST = 'http://127.0.0.1:5000';
+const SERVER_HOST = 'https://gonzalesvisionclinic.onrender.com';
 
 // Helper function to build correct backend image URLs
 const formatImageUrl = (url?: string | null): string => {
