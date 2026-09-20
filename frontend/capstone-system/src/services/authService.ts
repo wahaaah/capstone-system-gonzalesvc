@@ -7,13 +7,13 @@ export interface AuthUser {
   role: 'super_admin' | 'admin' | 'staff';
 }
 
-const API_BASE = 'https://gonzalesvisionclinic.onrender.com/api';
+const API_BASE = 'https://gonzalesvisionclinic.onrender.com';
 const TOKEN_KEY = 'gvc_auth_token';
 const USER_KEY = 'gvc_auth_user';
 
 export const authService = {
   login: async (username: string, password: string): Promise<AuthUser> => {
-    const response = await fetch(`${API_BASE}/auth/login`, {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
