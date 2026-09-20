@@ -29,7 +29,7 @@ export interface MonitoringStats {
   recentActivity: RecentActivityItem[];
 }
 
-const API_BASE = 'https://gonzalesvisionclinic.onrender.com';
+const API_BASE = 'https://gonzalesvisionclinic.onrender.com/api';
 
 export const monitoringService = {
   getStats: async (): Promise<MonitoringStats> => {

@@ -10,7 +10,7 @@ export interface ManagedUser {
   created_at: string;
 }
 
-const API_BASE = 'https://gonzalesvisionclinic.onrender.com';
+const API_BASE = 'https://gonzalesvisionclinic.onrender.com/api';
 
 export const userService = {
   getAll: async (): Promise<ManagedUser[]> => {
