@@ -6,7 +6,7 @@ const pool = mysql.createPool({
     host: process.env.DB_HOST || 'mysql.railway.internal',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || 'JPKfxDmFHQaVNkMtBySKwpskXNpyeFBx',
-    database: process.env.DB_NAME || 'railway',
+    database: process.env.DB_NAME || 'gonzales_vision_clinic',
     waitForConnections: true,
     connectionLimit: 10
 });
