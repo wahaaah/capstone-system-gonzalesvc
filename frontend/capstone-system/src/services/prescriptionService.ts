@@ -10,7 +10,7 @@ export interface Prescription {
   notes: string | null;
 }
 
-const API_BASE = 'https://gonzalesvisionclinic.onrender.com/api';
+const API_BASE = 'https://gonzalesvisionclinic.onrender.com';
 
 export const prescriptionService = {
   getForPatient: async (patientId: string): Promise<Prescription[]> => {

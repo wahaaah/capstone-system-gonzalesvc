@@ -17,7 +17,7 @@ export interface Frame {
   created_at?: string;
 }
 
-const API_BASE = 'https://gonzalesvisionclinic.onrender.com/api';
+const API_BASE = 'https://gonzalesvisionclinic.onrender.com';
 
 export const frameService = {
   getAll: async (): Promise<Frame[]> => {
