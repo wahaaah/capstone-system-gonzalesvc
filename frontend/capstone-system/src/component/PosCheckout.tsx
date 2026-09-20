@@ -16,7 +16,7 @@ interface CatalogItem {
   image_url?: string | null;
 }
 
-const SERVER_HOST = 'https://gonzalesvisionclinic.onrender.com';
+const SERVER_HOST = 'https://gonzalesvisionclinic.onrender.com/api';
 
 const formatImageUrl = (url?: string | null): string => {
   if (!url) return '';
