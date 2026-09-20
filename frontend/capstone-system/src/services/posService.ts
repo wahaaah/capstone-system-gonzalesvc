@@ -56,7 +56,7 @@ export interface PatientTransaction {
   items_summary: string | null;
 }
 
-const API_BASE = 'https://gonzalesvisionclinic.onrender.com';
+const API_BASE = 'https://gonzalesvisionclinic.onrender.com/api';
 
 export const posService = {
   getProducts: async (): Promise<Product[]> => {

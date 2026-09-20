@@ -11,7 +11,7 @@ export interface Patient {
   status: 'Active' | 'Pending' | 'Completed';
 }
 
-const API_BASE_URL = 'https://gonzalesvisionclinic.onrender.com';
+const API_BASE_URL = 'https://gonzalesvisionclinic.onrender.com/api';
 
 export const patientService = {
   // READ ALL

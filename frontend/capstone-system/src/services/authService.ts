@@ -7,7 +7,7 @@ export interface AuthUser {
   role: 'super_admin' | 'admin' | 'staff';
 }
 
-const API_BASE = 'https://gonzalesvisionclinic.onrender.com';
+const API_BASE = 'https://gonzalesvisionclinic.onrender.com/api';
 const TOKEN_KEY = 'gvc_auth_token';
 const USER_KEY = 'gvc_auth_user';
 
