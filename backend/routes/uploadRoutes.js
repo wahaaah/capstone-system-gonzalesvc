@@ -13,13 +13,12 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Set up Cloudinary storage destination for Multer
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'gonzales-vision-clinic-uploads',
         allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'glb', 'gltf'],
-        resource_type: 'auto', // Essential for handling both images and 3D .glb files
+        resource_type: 'auto',
     },
 });
 
@@ -32,15 +31,29 @@ const upload = multer({
         if (allowed.includes(ext)) cb(null, true);
         else cb(new Error('Only image / 3D model files are allowed.'));
     },
-});
+}).single('file');
 
-// POST /api/upload — uploads directly to Cloudinary and returns the permanent secure URL
-router.post('/', upload.single('file'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file received.' });
-    
-    // req.file.path returns the secure, permanent https://res.cloudinary.com/... URL
-    const fileUrl = req.file.path;
-    res.json({ url: fileUrl, filename: req.file.filename });
+// POST /api/upload with safe error catching to prevent 502 crashes
+router.post('/', (req, res) => {
+    upload(req, res, function (err) {
+        if (err instanceof multer.MulterError) {
+            // A Multer error occurred when uploading (e.g. file size limit exceeded)
+            console.error("Multer error:", err);
+            return res.status(400).json({ error: `Multer upload error: ${err.message}` });
+        } else if (err) {
+            // An unknown error occurred (e.g. Cloudinary config missing or invalid format)
+            console.error("Cloudinary/Upload error:", err);
+            return res.status(500).json({ error: `Upload processing error: ${err.message}` });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file received.' });
+        }
+
+        // Successfully uploaded to Cloudinary
+        const fileUrl = req.file.path;
+        return res.json({ url: fileUrl, filename: req.file.filename });
+    });
 });
 
 module.exports = router;
