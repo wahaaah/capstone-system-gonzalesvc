@@ -32,26 +32,43 @@ const upload = multer({
     },
 }).single('file');
 
-// POST /api/upload with safe error catching to prevent 502 crashes
+
 router.post('/', (req, res) => {
+    console.log('📥 /api/upload request received');
+
     upload(req, res, function (err) {
-        if (err instanceof multer.MulterError) {
-            // A Multer error occurred when uploading (e.g. file size limit exceeded)
-            console.error("Multer error:", err);
-            return res.status(400).json({ error: `Multer upload error: ${err.message}` });
-        } else if (err) {
-            // An unknown error occurred (e.g. Cloudinary config missing or invalid format)
-            console.error("Cloudinary/Upload error:", err);
-            return res.status(500).json({ error: `Upload processing error: ${err.message}` });
+        if (err) {
+            console.error('❌ UPLOAD ERROR:', err);
+            console.error('Error name:', err.name);
+            console.error('Error message:', err.message);
+            console.error('Error stack:', err.stack);
+
+            return res.status(500).json({
+                success: false,
+                error: err.message || 'Upload failed',
+                name: err.name || 'UnknownError'
+            });
         }
+
+        console.log('📦 req.file:', req.file);
 
         if (!req.file) {
-            return res.status(400).json({ error: 'No file received.' });
+            console.error('❌ No file received');
+
+            return res.status(400).json({
+                success: false,
+                error: 'No file received'
+            });
         }
 
-        // Successfully uploaded to Cloudinary
-        const fileUrl = req.file.path;
-        return res.json({ url: fileUrl, filename: req.file.filename });
+        console.log('✅ Cloudinary upload successful');
+        console.log('📎 URL:', req.file.path);
+
+        return res.status(200).json({
+            success: true,
+            url: req.file.path,
+            filename: req.file.filename
+        });
     });
 });
 
