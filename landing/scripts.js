@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
     // ── STATE VARIABLES ──
-    const apiBase = document.body.dataset.api || 'http://localhost:5000';
+    const apiBase = document.body.dataset.api || 'https://gonzalesvisionclinic.onrender.com';
     let allFrames = [];
     let searchQuery = '';
     let selectedCategory = 'All';
