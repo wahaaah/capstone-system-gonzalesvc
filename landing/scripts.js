@@ -249,22 +249,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function applyFilters() {
-        const filtered = allFrames.filter(frame => {
-            const frameName = String(frame.name || '').toLowerCase();
-            const frameBrand = String(frame.brand || '').toLowerCase();
-            const frameCat = String(frame.category || '').toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
+    const category = selectedCategory.toLowerCase().trim();
 
-            const query = searchQuery.toLowerCase().trim();
-            const matchesSearch = query === '' || frameName.includes(query) || frameBrand.includes(query);
+    console.log('🔎 Applying filters:', {
+        search: query,
+        category: category,
+        totalFrames: allFrames.length
+    });
 
-            const targetCat = selectedCategory.toLowerCase();
-            const matchesCategory = selectedCategory === 'All' || frameCat.includes(targetCat);
+    const filtered = allFrames.filter(frame => {
+        const frameName = String(frame.name || '').toLowerCase().trim();
+        const frameBrand = String(frame.brand || '').toLowerCase().trim();
+        const frameCategory = String(frame.category || '').toLowerCase().trim();
 
-            return matchesSearch && matchesCategory;
+        const matchesSearch =
+            query === '' ||
+            frameName.includes(query) ||
+            frameBrand.includes(query);
+
+        const matchesCategory =
+            category === 'all' ||
+            frameCategory.includes(category);
+
+        console.log('🕶️ Frame:', {
+            name: frame.name,
+            category: frame.category,
+            matchesSearch,
+            matchesCategory
         });
 
-        renderFrameCards(filtered);
-    }
+        return matchesSearch && matchesCategory;
+    });
+
+    console.log(
+        `✅ Showing ${filtered.length} of ${allFrames.length} frames`
+    );
+
+    renderFrameCards(filtered);
+}
 
     async function loadFramesFromAPI() {
         const frameGrid = document.getElementById('frame-grid');
