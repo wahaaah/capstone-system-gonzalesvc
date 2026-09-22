@@ -37,35 +37,44 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 1b. READ ONE: Get a single patient profile by ID with dynamic last visit calculation
-router.get('/:id', async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const query = `
             SELECT 
                 p.*, 
-                COALESCE(v.last_visit, NULL) AS last_visit
+                v.last_visit
             FROM patients p
             LEFT JOIN (
-                SELECT patient_id, MAX(visit_date) AS last_visit
+                SELECT 
+                    patient_id, 
+                    MAX(visit_date) AS last_visit
                 FROM (
-                    SELECT patient_id, appointment_date AS visit_date 
+                    SELECT 
+                        patient_id, 
+                        appointment_date AS visit_date 
                     FROM appointments 
                     WHERE appointment_status NOT IN ('Canceled', 'Cancelled')
+
                     UNION ALL
-                    SELECT patient_id, created_at AS visit_date 
-                    FROM transactions
+
+                    SELECT 
+                        a.patient_id, 
+                        t.created_at AS visit_date
+                    FROM transactions t
+                    INNER JOIN appointments a 
+                        ON t.appointment_id = a.appointment_id
                 ) all_visits
                 GROUP BY patient_id
-            ) v ON p.patient_id = v.patient_id
-            WHERE p.patient_id = ?
+            ) v 
+                ON p.patient_id = v.patient_id
+            ORDER BY p.name ASC
         `;
-        const [rows] = await db.query(query, [req.params.id]);
-        if (rows.length === 0) {
-            return res.status(404).json({ error: 'Patient not found.' });
-        }
-        res.json(rows[0]);
+
+        const [rows] = await db.query(query);
+        res.json(rows);
+
     } catch (error) {
-        console.error('Error fetching patient:', error.message);
+        console.error('Error fetching patients:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
