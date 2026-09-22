@@ -281,14 +281,15 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
     }
   };
 
-  // Handle 2D Image Upload
+ // Handle 2D Image Upload - DIAGNOSTIC VERSION
 const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
   if (!file) return;
 
+  console.log("Step 1: File selected:", file.name);
+
   if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
     setError(`File size must be less than ${MAX_FILE_SIZE_MB}MB.`);
-    if (imageInputRef.current) imageInputRef.current.value = '';
     return;
   }
 
@@ -299,26 +300,36 @@ const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
   setIsUploadingImage(true);
 
   try {
+    console.log("Step 2: Preparing FormData...");
     const formData = new FormData();
     formData.append('file', file);
     
-    const resp = await fetch(`${API_BASE}/upload`, { 
-      method: 'POST', 
-      body: formData 
-    });
+    console.log("Step 3: Sending POST request to:", `${API_BASE}/upload`);
+    const resp = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
     
-    if (!resp.ok) throw new Error('Upload failed');
+    console.log("Step 4: Received response from server. Status:", resp.status);
+    if (!resp.ok) throw new Error(`Upload failed with status ${resp.status}`);
+    
     const data = await resp.json();
+    console.log("Step 5: Backend JSON response:", data);
 
-    // Directly assign data.url since your backend sends res.json({ url: fileUrl, ... })
-    const rawUrl = data.url || '';
+    const rawUrl = data.url || data.secure_url || data.path || '';
+    console.log("Step 6: Extracted raw URL:", rawUrl);
+
+    if (!rawUrl) {
+      console.error("🚨 ERROR: The backend responded, but there is no URL in the data!");
+    }
+
     const formatted = formatImageUrl(rawUrl);
-    
     setUploadedImageUrl(formatted);
+    console.log("Step 7: Uploaded image URL state set successfully!");
+
   } catch (err: any) {
+    console.error("🚨 Step 8 (ERROR): Catch block triggered!", err);
     setError('Image upload failed — ' + (err.message || 'please try again.'));
     clearImage();
   } finally {
+    console.log("Step 9: Finally block running, clearing loading state.");
     setIsUploadingImage(false);
   }
 };
