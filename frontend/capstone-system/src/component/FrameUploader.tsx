@@ -8,8 +8,8 @@ interface FrameUploaderProps {
   onCreated: () => void;
 }
 
-const API_BASE = 'https://gonzalesvisionclinic.onrender.com/api';
-const SERVER_HOST = 'https://gonzalesvisionclinic.onrender.com/api';
+const SERVER_HOST = 'https://gonzalesvisionclinic.onrender.com';
+const API_BASE = `${SERVER_HOST}/api`;
 const MAX_FILE_SIZE_MB = 15; 
 
 // Helper to construct complete URLs for relative backend paths
