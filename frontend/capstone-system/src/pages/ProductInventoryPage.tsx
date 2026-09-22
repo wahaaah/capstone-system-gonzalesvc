@@ -83,33 +83,65 @@ export default function ProductInventoryPage() {
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    if (imagePreview && imagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(imagePreview);
+  console.log('📸 Product image selected:', file.name);
+  console.log('📦 File size:', file.size);
+  console.log('📦 File type:', file.type);
+
+  if (imagePreview && imagePreview.startsWith('blob:')) {
+    URL.revokeObjectURL(imagePreview);
+  }
+
+  setImagePreview(URL.createObjectURL(file));
+  setIsUploading(true);
+  setError('');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    console.log('📤 Uploading product image to:', `${API_BASE}/upload`);
+
+    const resp = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    console.log('📥 Upload response status:', resp.status);
+
+    const data = await resp.json();
+
+    console.log('📥 Upload response:', data);
+
+    if (!resp.ok) {
+      throw new Error(data.error || `Upload failed with status ${resp.status}`);
     }
 
-    setImagePreview(URL.createObjectURL(file));
-    setIsUploading(true);
-    setError('');
+    const rawUrl = data.url || data.secure_url || data.imageUrl || '';
 
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const resp = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
-      if (!resp.ok) throw new Error('Upload failed');
-      const data = await resp.json();
+    console.log('🔗 Cloudinary URL:', rawUrl);
 
-      const rawUrl = data.url || data.imageUrl || '';
-      setImageUrl(rawUrl);
-    } catch (err: any) {
-      setError('Image upload failed — ' + (err.message || 'please try again.'));
-      clearImage();
-    } finally {
-      setIsUploading(false);
+    if (!rawUrl) {
+      throw new Error('Upload succeeded but no image URL was returned.');
     }
-  };
+
+    setImageUrl(rawUrl);
+
+  } catch (err: any) {
+    console.error('❌ Product image upload error:', err);
+
+    setError(
+      'Image upload failed — ' +
+      (err.message || 'please try again.')
+    );
+
+    clearImage();
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
