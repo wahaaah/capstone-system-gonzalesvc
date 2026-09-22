@@ -2,34 +2,38 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary-v2');
 const path = require('path');
 
-// Configure Cloudinary using Render environment variables
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'gonzales-vision-clinic-uploads',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'glb', 'gltf'],
-        resource_type: 'auto',
-    },
-});
-
 const upload = multer({
-    storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
-    fileFilter: (req, file, cb) => {
-        const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.glb', '.gltf'];
-        const ext = path.extname(file.originalname).toLowerCase();
-        if (allowed.includes(ext)) cb(null, true);
-        else cb(new Error('Only image / 3D model files are allowed.'));
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 10 * 1024 * 1024
     },
+    fileFilter: (req, file, cb) => {
+        const allowed = [
+            '.jpg',
+            '.jpeg',
+            '.png',
+            '.webp',
+            '.gif',
+            '.glb',
+            '.gltf'
+        ];
+
+        const ext = path.extname(file.originalname).toLowerCase();
+
+        if (allowed.includes(ext)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image / 3D model files are allowed.'));
+        }
+    }
 }).single('file');
 
 
@@ -38,19 +42,13 @@ router.post('/', (req, res) => {
 
     upload(req, res, function (err) {
         if (err) {
-            console.error('❌ UPLOAD ERROR:', err);
-            console.error('Error name:', err.name);
-            console.error('Error message:', err.message);
-            console.error('Error stack:', err.stack);
+            console.error('❌ MULTER ERROR:', err);
 
             return res.status(500).json({
                 success: false,
-                error: err.message || 'Upload failed',
-                name: err.name || 'UnknownError'
+                error: err.message || 'Upload failed'
             });
         }
-
-        console.log('📦 req.file:', req.file);
 
         if (!req.file) {
             console.error('❌ No file received');
@@ -61,15 +59,46 @@ router.post('/', (req, res) => {
             });
         }
 
-        console.log('✅ Cloudinary upload successful');
-        console.log('📎 URL:', req.file.path);
+        console.log('📦 File received:', req.file.originalname);
+        console.log('📦 File size:', req.file.size);
 
-        return res.status(200).json({
-            success: true,
-            url: req.file.path,
-            filename: req.file.filename
-        });
+        const is3D =
+            ['.glb', '.gltf'].includes(
+                path.extname(req.file.originalname).toLowerCase()
+            );
+
+        const uploadOptions = {
+            folder: 'gonzales-vision-clinic-uploads',
+            resource_type: is3D ? 'raw' : 'image'
+        };
+
+        const stream = cloudinary.uploader.upload_stream(
+            uploadOptions,
+            (error, result) => {
+
+                if (error) {
+                    console.error('❌ CLOUDINARY ERROR:', error);
+
+                    return res.status(500).json({
+                        success: false,
+                        error: error.message || 'Cloudinary upload failed'
+                    });
+                }
+
+                console.log('✅ Cloudinary upload successful');
+                console.log('📎 URL:', result.secure_url);
+
+                return res.status(200).json({
+                    success: true,
+                    url: result.secure_url,
+                    filename: result.public_id
+                });
+            }
+        );
+
+        stream.end(req.file.buffer);
     });
 });
+
 
 module.exports = router;
