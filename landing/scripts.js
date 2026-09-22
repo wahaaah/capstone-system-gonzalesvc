@@ -198,13 +198,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         frameGrid.innerHTML = '';
         framesToRender.forEach(frame => {
             const isConverted = frame.conversion_status === 'Converted' && frame.model_3d_url;
-            const modelUrl = isConverted 
-                ? (frame.model_3d_url.startsWith('http') ? frame.model_3d_url : `${apiBase}${frame.model_3d_url}`)
+            
+            const cleanApiBase = apiBase.replace(/\/+$/, '');
+            
+            const cleanModelUrl = frame.model_3d_url 
+                ? (frame.model_3d_url.startsWith('http') ? frame.model_3d_url : `${cleanApiBase}/${frame.model_3d_url.replace(/^\/+/, '')}`)
                 : null;
+            const modelUrl = isConverted ? cleanModelUrl : null;
 
             const rawImg = frame.image_2d_url || frame.image_url;
+            const cleanRawImg = rawImg ? (rawImg.startsWith('/') ? rawImg : `/${rawImg}`) : '';
             const imgUrl = rawImg 
-                ? (rawImg.startsWith('http') ? rawImg : `${apiBase}${rawImg}`)
+                ? (rawImg.startsWith('http') ? rawImg : `${cleanApiBase}${cleanRawImg}`)
                 : 'https://via.placeholder.com/300x150?text=No+Image';
 
             const card = document.createElement('div');
