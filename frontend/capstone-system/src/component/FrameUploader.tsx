@@ -282,43 +282,46 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
   };
 
   // Handle 2D Image Upload
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      setError(`File size must be less than ${MAX_FILE_SIZE_MB}MB.`);
-      if (imageInputRef.current) imageInputRef.current.value = '';
-      return;
-    }
+  if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+    setError(`File size must be less than ${MAX_FILE_SIZE_MB}MB.`);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    return;
+  }
 
-    if (imagePreview && imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-    setError('');
-    setIsUploadingImage(true);
+  if (imagePreview && imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+  setImageFile(file);
+  setImagePreview(URL.createObjectURL(file));
+  setError('');
+  setIsUploadingImage(true);
 
-try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const resp = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
-      if (!resp.ok) throw new Error('Upload failed');
-      
-      const data = await resp.json();
-      console.log("Extracted URL from backend:", data.url); // Log the string directly!
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const resp = await fetch(`${API_BASE}/upload`, { 
+      method: 'POST', 
+      body: formData 
+    });
+    
+    if (!resp.ok) throw new Error('Upload failed');
+    const data = await resp.json();
 
-      const rawUrl = data.url || '';
-      const formatted = formatImageUrl(rawUrl);
-      
-      console.log("Final Formatted URL:", formatted);
-      setUploadedImageUrl(formatted);
-    } catch (err: any) {
-      setError('Image upload failed — ' + (err.message || 'please try again.'));
-      clearImage();
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
+    // Directly assign data.url since your backend sends res.json({ url: fileUrl, ... })
+    const rawUrl = data.url || '';
+    const formatted = formatImageUrl(rawUrl);
+    
+    setUploadedImageUrl(formatted);
+  } catch (err: any) {
+    setError('Image upload failed — ' + (err.message || 'please try again.'));
+    clearImage();
+  } finally {
+    setIsUploadingImage(false);
+  }
+};
 
   // Handle 3D GLB Upload
   const handleGlbSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
