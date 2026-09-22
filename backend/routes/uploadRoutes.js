@@ -1,24 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const path = require('path');
-const fs = require('fs');
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+// Configure Cloudinary using Render environment variables
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + path.extname(file.originalname).toLowerCase());
+// Set up Cloudinary storage destination for Multer
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'gonzales-vision-clinic-uploads',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'glb', 'gltf'],
+        resource_type: 'auto', // Essential for handling both images and 3D .glb files
     },
 });
 
 const upload = multer({
-    storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
     fileFilter: (req, file, cb) => {
         const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.glb', '.gltf'];
         const ext = path.extname(file.originalname).toLowerCase();
@@ -27,10 +33,12 @@ const upload = multer({
     },
 });
 
-// POST /api/upload — single file upload, returns the URL to use in the system
+// POST /api/upload — uploads directly to Cloudinary and returns the permanent secure URL
 router.post('/', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file received.' });
-    const fileUrl = `/uploads/${req.file.filename}`;
+    
+    // req.file.path returns the secure, permanent https://res.cloudinary.com/... URL
+    const fileUrl = req.file.path;
     res.json({ url: fileUrl, filename: req.file.filename });
 });
 
