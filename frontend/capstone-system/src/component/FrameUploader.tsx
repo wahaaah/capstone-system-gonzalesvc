@@ -298,15 +298,22 @@ export default function FrameUploader({ onCreated }: FrameUploaderProps) {
     setError('');
     setIsUploadingImage(true);
 
-    try {
+try {
       const formData = new FormData();
       formData.append('file', file);
       const resp = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
       if (!resp.ok) throw new Error('Upload failed');
       const data = await resp.json();
+      
+      console.log("Upload API Response:", data); // Check your browser console to see the exact structure!
 
-      const rawUrl = data.url || data.imageUrl || '';
-      setUploadedImageUrl(formatImageUrl(rawUrl));
+      const rawUrl = data.url || data.imageUrl || data.secure_url || '';
+      console.log("Raw URL extracted:", rawUrl);
+      
+      const formatted = formatImageUrl(rawUrl);
+      console.log("Formatted URL:", formatted);
+
+      setUploadedImageUrl(formatted);
     } catch (err: any) {
       setError('Image upload failed — ' + (err.message || 'please try again.'));
       clearImage();
