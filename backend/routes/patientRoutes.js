@@ -51,14 +51,80 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 2. CREATE: Register a new patient account
+
+// 2. READ ONE: Get a specific patient by patient ID
+router.get('/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const query = `
+            SELECT 
+                p.*, 
+                v.last_visit
+            FROM patients p
+            LEFT JOIN (
+                SELECT 
+                    patient_id, 
+                    MAX(visit_date) AS last_visit
+                FROM (
+                    SELECT 
+                        patient_id, 
+                        appointment_date AS visit_date 
+                    FROM appointments 
+                    WHERE appointment_status NOT IN ('Canceled', 'Cancelled')
+
+                    UNION ALL
+
+                    SELECT 
+                        a.patient_id, 
+                        t.created_at AS visit_date
+                    FROM transactions t
+                    INNER JOIN appointments a 
+                        ON t.appointment_id = a.appointment_id
+                ) all_visits
+                GROUP BY patient_id
+            ) v 
+                ON p.patient_id = v.patient_id
+            WHERE p.patient_id = ?
+            LIMIT 1
+        `;
+
+        const [rows] = await db.query(query, [id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({
+                error: 'Patient not found'
+            });
+        }
+
+        res.json(rows[0]);
+
+    } catch (error) {
+        console.error('Error fetching patient:', error.message);
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// =====================================================
+// 3. CREATE PATIENT
+// =====================================================
+
 router.post('/', async (req, res) => {
-    const { patient_id, name, age, gender, contact, status } = req.body;
+    const {
+        patient_id,
+        name,
+        age,
+        gender,
+        contact,
+        status
+    } = req.body;
 
     try {
         const query = `
             INSERT INTO patients 
-                (patient_id, name, age, gender, contact, status) 
+                (patient_id, name, age, gender, contact, status)
             VALUES (?, ?, ?, ?, ?, ?)
         `;
 
@@ -82,19 +148,36 @@ router.post('/', async (req, res) => {
 
     } catch (error) {
         console.error('Error creating patient:', error.message);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({
+            error: error.message
+        });
     }
 });
 
-// 3. UPDATE: Modify an existing patient record
+
+// =====================================================
+// 4. UPDATE PATIENT
+// =====================================================
+
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, age, gender, contact, status } = req.body;
+    const {
+        name,
+        age,
+        gender,
+        contact,
+        status
+    } = req.body;
 
     try {
         const query = `
-            UPDATE patients 
-            SET name = ?, age = ?, gender = ?, contact = ?, status = ? 
+            UPDATE patients
+            SET 
+                name = ?,
+                age = ?,
+                gender = ?,
+                contact = ?,
+                status = ?
             WHERE patient_id = ?
         `;
 
@@ -118,11 +201,17 @@ router.put('/:id', async (req, res) => {
 
     } catch (error) {
         console.error('Error updating patient:', error.message);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({
+            error: error.message
+        });
     }
 });
 
-// 4. DELETE: Purge a profile from the ledger
+
+// =====================================================
+// 5. DELETE PATIENT
+// =====================================================
+
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
@@ -139,8 +228,11 @@ router.delete('/:id', async (req, res) => {
 
     } catch (error) {
         console.error('Error deleting patient:', error.message);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({
+            error: error.message
+        });
     }
 });
+
 
 module.exports = router;
