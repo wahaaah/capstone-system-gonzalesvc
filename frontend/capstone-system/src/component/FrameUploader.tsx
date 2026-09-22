@@ -303,16 +303,14 @@ try {
       formData.append('file', file);
       const resp = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
       if (!resp.ok) throw new Error('Upload failed');
+      
       const data = await resp.json();
-      
-      console.log("Upload API Response:", data); // Check your browser console to see the exact structure!
+      console.log("Extracted URL from backend:", data.url); // Log the string directly!
 
-      const rawUrl = data.url || data.imageUrl || data.secure_url || '';
-      console.log("Raw URL extracted:", rawUrl);
-      
+      const rawUrl = data.url || '';
       const formatted = formatImageUrl(rawUrl);
-      console.log("Formatted URL:", formatted);
-
+      
+      console.log("Final Formatted URL:", formatted);
       setUploadedImageUrl(formatted);
     } catch (err: any) {
       setError('Image upload failed — ' + (err.message || 'please try again.'));
