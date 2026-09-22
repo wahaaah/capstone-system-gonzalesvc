@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { posService, type Product } from '../services/posService';
 import { Package, ImageOff, Pencil, Trash2, ImagePlus, X, RefreshCw } from 'lucide-react';
 
-const API_BASE = 'https://gonzalesvisionclinic.onrender.com';
 const SERVER_HOST = 'https://gonzalesvisionclinic.onrender.com';
+const API_BASE = `${SERVER_HOST}/api`;
 
 // Helper function to build correct backend image URLs
 const formatImageUrl = (url?: string | null): string => {
