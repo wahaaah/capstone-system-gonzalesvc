@@ -234,5 +234,87 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// =====================================================
+// 6. MOBILE PATIENT REGISTRATION
+// =====================================================
 
+router.post('/register', async (req, res) => {
+    const { name, age, gender, contact, email, password } = req.body;
+
+    try {
+        // Check if email already exists
+        const [existing] = await db.query('SELECT * FROM patients WHERE email = ?', [email]);
+        if (existing.length > 0) {
+            return res.status(400).json({ error: 'Email is already registered.' });
+        }
+
+        // Generate a unique patient ID like GVC-XXXX
+        const patient_id = 'GVC-' + Math.floor(1000 + Math.random() * 9000);
+
+        const query = `
+            INSERT INTO patients 
+                (patient_id, name, age, gender, contact, email, password, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')
+        `;
+
+        await db.query(query, [
+            patient_id,
+            name,
+            age || null,
+            gender || null,
+            contact || null,
+            email,
+            password // Note: In production, use bcrypt.hash() here!
+        ]);
+
+        res.status(201).json({
+            success: true,
+            message: 'Registration successful!',
+            patient_id,
+            email,
+            name
+        });
+
+    } catch (error) {
+        console.error('Error during mobile registration:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// =====================================================
+// 7. MOBILE PATIENT LOGIN
+// =====================================================
+
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const query = `SELECT * FROM patients WHERE email = ? LIMIT 1`;
+        const [rows] = await db.query(query, [email]);
+
+        if (rows.length === 0) {
+            return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        const patient = rows[0];
+
+        // Check password (direct match since it's stored plain for now, or use bcrypt.compare later)
+        if (patient.password !== password) {
+            return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Login successful!',
+            patient_id: patient.patient_id,
+            name: patient.name,
+            email: patient.email
+        });
+
+    } catch (error) {
+        console.error('Error during mobile login:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
 module.exports = router;
