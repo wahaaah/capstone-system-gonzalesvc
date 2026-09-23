@@ -58,11 +58,13 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
   }, [patients]);
 
   useEffect(() => {
-    loadSchedule();
-    loadPatients();
-    const interval = setInterval(loadSchedule, 60000); 
-    return () => clearInterval(interval);
-  }, []);
+  loadSchedule();
+  loadPatients();
+
+  const interval = setInterval(loadSchedule, 10000);
+
+  return () => clearInterval(interval);
+}, []);
 
   const loadPatients = async () => {
     setIsLoadingPatients(true);
