@@ -305,29 +305,87 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-   window.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
+    window.openTryOnModal = async function (frameId) {
+    const status = document.getElementById('vto-status');
 
-    const targetFrameId = urlParams.get('frameId');
-    const mobileTryOn = urlParams.get('mobileTryOn') === 'true';
+    function setStatus(message) {
+        console.log(message);
 
-    if (mobileTryOn && targetFrameId) {
-        document.body.classList.add('mobile-try-on-mode');
-
-        const checkExist = setInterval(() => {
-            if (typeof window.openTryOnModal === 'function') {
-                clearInterval(checkExist);
-
-                console.log(
-                    '📱 Opening mobile Try-On for frame:',
-                    targetFrameId
-                );
-
-                window.openTryOnModal(targetFrameId);
-            }
-        }, 500);
+        if (status) {
+            status.textContent = message;
+        }
     }
-});
+
+    try {
+        setStatus(`📱 Mobile Try-On: Frame ${frameId}`);
+
+        const numericFrameId = Number(frameId);
+
+        if (!numericFrameId) {
+            setStatus(`❌ Invalid frame ID: ${frameId}`);
+            return;
+        }
+
+        // Make sure frames are loaded
+        if (!Array.isArray(allFrames) || allFrames.length === 0) {
+            setStatus('⏳ Loading frame data...');
+
+            await loadFramesFromAPI();
+        }
+
+        if (!Array.isArray(allFrames)) {
+            setStatus('❌ Frame API did not return a list.');
+            console.error('allFrames:', allFrames);
+            return;
+        }
+
+        const frame = allFrames.find(
+            item => Number(item.frame_id) === numericFrameId
+        );
+
+        if (!frame) {
+            setStatus(`❌ Frame ${numericFrameId} not found.`);
+            console.error('Available frames:', allFrames);
+            return;
+        }
+
+        setStatus(`✅ Frame found: ${frame.name}`);
+
+        const modelUrl = frame.model_3d_url;
+
+        if (!modelUrl) {
+            setStatus('❌ This frame has no 3D model.');
+            return;
+        }
+
+        if (frame.conversion_status !== 'Converted') {
+            setStatus(
+                `❌ Model is not converted: ${frame.conversion_status}`
+            );
+            return;
+        }
+
+        const cleanModelUrl =
+            modelUrl.startsWith('http')
+                ? modelUrl
+                : `${apiBase}/${modelUrl.replace(/^\/+/, '')}`;
+
+        console.log('🕶️ Mobile selected frame:', frame);
+        console.log('🥽 Loading model:', cleanModelUrl);
+
+        setStatus('🥽 Loading 3D model...');
+
+        loadGLTFModel(cleanModelUrl);
+
+    } catch (error) {
+        console.error('❌ Mobile Try-On failed:', error);
+
+        setStatus(
+            `❌ Try-On error: ${error.message || error}`
+        );
+    }
+};
+
     // ── SEARCH & CATEGORY EVENT LISTENERS ──
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -372,6 +430,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     await initFaceDetection();
+
+    // ── MOBILE WEBVIEW TRY-ON ──
+
+const urlParams = new URLSearchParams(
+    window.location.search
+);
+
+const targetFrameId = urlParams.get('frameId');
+
+const mobileTryOn =
+    urlParams.get('mobileTryOn') === 'true';
+
+if (mobileTryOn && targetFrameId) {
+
+    console.log(
+        '📱 MOBILE TRY-ON MODE:',
+        targetFrameId
+    );
+
+    document.body.classList.add(
+        'mobile-try-on-mode'
+    );
+
+    console.log(
+        '📱 Calling openTryOnModal:',
+        targetFrameId
+    );
+
+    window.openTryOnModal(targetFrameId);
+}
 
     // ── CLEANUP & MODAL CLOSING ──
     function closeVirtualTryOn() {
