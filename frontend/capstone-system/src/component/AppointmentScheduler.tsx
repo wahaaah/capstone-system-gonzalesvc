@@ -141,54 +141,64 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
   };
 
   const handleAcceptRequest = async (appointment: Appointment) => {
-    try {
-      const targetTime = appointment.appointment_time?.substring(0, 5);
-      const targetDate = appointment.appointment_date?.split('T')[0];
-      
-      if (targetDate && targetDate < todayString) {
-        alert("Cannot accept request: The requested date is in the past.");
-        return;
-      }
+  try {
+    const targetTime = appointment.appointment_time?.substring(0, 5);
+    const targetDate = appointment.appointment_date?.split('T')[0];
 
-      if (targetDate && targetDate === todayString && targetTime && isSlotInPast(targetDate, targetTime + ':00')) {
-        alert("Cannot accept request: The requested time slot has already passed today.");
-        return;
-      }
+    if (targetDate && targetDate < todayString) {
+      alert("Cannot accept request: The requested date is in the past.");
+      return;
+    }
 
-      const isAlreadyOccupied = appointments.some(a => 
-        a.appointment_date?.split('T')[0] === targetDate && 
+    if (
+      targetDate &&
+      targetDate === todayString &&
+      targetTime &&
+      isSlotInPast(targetDate, targetTime + ':00')
+    ) {
+      alert("Cannot accept request: The requested time slot has already passed today.");
+      return;
+    }
+
+    const isAlreadyOccupied = appointments.some(
+      a =>
+        a.appointment_date?.split('T')[0] === targetDate &&
         a.appointment_time?.substring(0, 5) === targetTime &&
         a.appointment_status !== 'Cancelled'
+    );
+
+    if (isAlreadyOccupied) {
+      alert(
+        "Cannot accept request: This slot has already been booked manually in the interim."
       );
-
-      if (isAlreadyOccupied) {
-        alert("Cannot accept request: This slot has already been booked manually in the interim.");
-        return;
-      }
-
-      const targetId = appointment.id || appointment.appointment_id;
-      if (!targetId) {
-        alert("Error: Cannot process request. Missing Appointment ID.");
-        return;
-      }
-
-      if (appointmentService.update) {
-        await appointmentService.update(targetId, {
-          ...appointment,
-          appointment_status: 'Pending'
-        });
-      } else {
-        await appointmentService.create({
-          ...appointment,
-          appointment_status: 'Pending'
-        });
-      }
-
-      loadSchedule();
-    } catch (err: any) {
-      alert(`Error updating request: ${err.message}`);
+      return;
     }
-  };
+
+    const targetId = appointment.id || appointment.appointment_id;
+
+    if (!targetId) {
+      alert("Error: Cannot process request. Missing Appointment ID.");
+      return;
+    }
+
+    if (appointmentService.update) {
+      await appointmentService.update(targetId, {
+        ...appointment,
+        appointment_status: 'Confirmed'
+      });
+    } else {
+      await appointmentService.create({
+        ...appointment,
+        appointment_status: 'Confirmed'
+      });
+    }
+
+    await loadSchedule();
+
+  } catch (err: any) {
+    alert(`Error updating request: ${err.message}`);
+  }
+};
 
   const handleCancelRequest = async (appointment: Appointment) => {
   const targetId = appointment.id || appointment.appointment_id;
