@@ -404,186 +404,227 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             );
 
-            // =====================================================
-            // FACE DETECTION
-            // =====================================================
 
-            video.addEventListener(
-                'playing',
-                async () => {
+// =====================================================
+// FACE DETECTION
+// =====================================================
 
-                    const displaySize = {
-                        width:
-                            video.videoWidth,
+video.addEventListener(
+    'playing',
+    async () => {
 
-                        height:
-                            video.videoHeight
-                    };
+        const displaySize = {
+            width: video.videoWidth,
+            height: video.videoHeight
+        };
+
+        console.log(
+            '🙂 Face detection started:',
+            displaySize
+        );
+
+        // ---------------------------------------------
+        // STATUS DISPLAY
+        // ---------------------------------------------
+
+        const status =
+            document.getElementById('vto-status');
+
+        if (status) {
+            status.textContent =
+                '🔍 Looking for your face...';
+        }
+
+        // ---------------------------------------------
+        // FACE DETECTION LOOP
+        // ---------------------------------------------
+
+        setInterval(
+            async () => {
+
+                if (!model) return;
+
+                try {
+const detections =
+    await faceapi
+        .detectAllFaces(
+            video,
+            new faceapi.SsdMobilenetv1Options({
+                minConfidence: 0.5
+            })
+        )
+        .withFaceLandmarks();
+
+                    // ---------------------------------
+                    // NO FACE
+                    // ---------------------------------
+
+                    if (detections.length === 0) {
+
+                        console.log(
+                            '🔴 NO FACE DETECTED'
+                        );
+
+                        if (status) {
+                            status.textContent =
+                                '🔴 No face detected';
+                        }
+
+                        return;
+                    }
+
+                    // ---------------------------------
+                    // FACE FOUND
+                    // ---------------------------------
 
                     console.log(
-                        '🙂 Face detection started:',
-                        displaySize
+                        '🟢 FACE DETECTED:',
+                        detections[0].detection.score
                     );
 
-                    setInterval(
-                        async () => {
+                    if (status) {
+                        status.textContent =
+                            `🟢 Face detected`;
+                    }
 
-                            if (!model) return;
+                    const detection =
+                        detections[0];
 
-                            try {
+                    const leftEye =
+                        detection
+                            .landmarks
+                            .getLeftEye();
 
-                                const detections =
-                                    await faceapi
-                                        .detectAllFaces(
-                                            video
-                                        )
-                                        .withFaceLandmarks();
+                    const rightEye =
+                        detection
+                            .landmarks
+                            .getRightEye();
 
-                                if (
-                                    detections.length > 0
-                                ) {
+                    // =================================
+                    // FACE CENTER
+                    // =================================
 
-                                    const detection =
-                                        detections[0];
+                    const centerX =
+                        (
+                            leftEye[0].x +
+                            rightEye[0].x
+                        ) / 2;
 
-                                    const leftEye =
-                                        detection
-                                            .landmarks
-                                            .getLeftEye();
+                    const centerY =
+                        (
+                            leftEye[0].y +
+                            rightEye[0].y
+                        ) / 2;
 
-                                    const rightEye =
-                                        detection
-                                            .landmarks
-                                            .getRightEye();
+                    const worldCenterPoint =
+                        screenToWorldCoordinates(
+                            {
+                                x: centerX,
+                                y: centerY
+                            },
+                            displaySize
+                        );
 
-                                    // =================================================
-                                    // FACE CENTER
-                                    // =================================================
+                    // =================================
+                    // FRAME POSITION
+                    // =================================
 
-                                    const centerX =
-                                        (
-                                            leftEye[0].x +
-                                            rightEye[0].x
-                                        ) / 2;
+                    const eyeToEyebrowOffset = 1;
 
-                                    const centerY =
-                                        (
-                                            leftEye[0].y +
-                                            rightEye[0].y
-                                        ) / 2;
+                    const adjustedWorldCenterPoint = {
+                        x: worldCenterPoint.x,
 
-                                    const worldCenterPoint =
-                                        screenToWorldCoordinates(
-                                            {
-                                                x: centerX,
-                                                y: centerY
-                                            },
-                                            displaySize
-                                        );
+                        y:
+                            worldCenterPoint.y -
+                            eyeToEyebrowOffset,
 
-                                    // =================================================
-                                    // FRAME POSITION
-                                    // =================================================
+                        z: worldCenterPoint.z
+                    };
 
-                                    const eyeToEyebrowOffset =
-                                        1;
+                    if (
+                        !isNaN(
+                            adjustedWorldCenterPoint.x
+                        )
+                    ) {
 
-                                    const adjustedWorldCenterPoint =
-                                        {
-                                            x:
-                                                worldCenterPoint.x,
+                        model.position.copy(
+                            adjustedWorldCenterPoint
+                        );
+                    }
 
-                                            y:
-                                                worldCenterPoint.y -
-                                                eyeToEyebrowOffset,
+                    // =================================
+                    // FRAME ROTATION
+                    // =================================
 
-                                            z:
-                                                worldCenterPoint.z
-                                        };
+                    const deltaY =
+                        rightEye[0].y -
+                        leftEye[0].y;
 
-                                    if (
-                                        !isNaN(
-                                            adjustedWorldCenterPoint.x
-                                        )
-                                    ) {
+                    const deltaX =
+                        rightEye[0].x -
+                        leftEye[0].x;
 
-                                        model.position.copy(
-                                            adjustedWorldCenterPoint
-                                        );
-                                    }
+                    const angle =
+                        Math.atan2(
+                            deltaY,
+                            deltaX
+                        );
 
-                                    // =================================================
-                                    // FRAME ROTATION
-                                    // =================================================
+                    model.rotation.z =
+                        angle;
 
-                                    const deltaY =
-                                        rightEye[0].y -
-                                        leftEye[0].y;
+                    // =================================
+                    // FRAME SCALE
+                    // =================================
 
-                                    const deltaX =
-                                        rightEye[0].x -
-                                        leftEye[0].x;
+                    const distanceBetweenEyes =
+                        Math.sqrt(
+                            Math.pow(
+                                rightEye[0].x -
+                                leftEye[0].x,
+                                2
+                            ) +
+                            Math.pow(
+                                rightEye[0].y -
+                                leftEye[0].y,
+                                2
+                            )
+                        );
 
-                                    const angle =
-                                        Math.atan2(
-                                            deltaY,
-                                            deltaX
-                                        );
+                    const scaleFactor =
+                        distanceBetweenEyes /
+                        200;
 
-                                    model.rotation.z =
-                                        angle;
+                    if (
+                        !isNaN(scaleFactor) &&
+                        scaleFactor > 0
+                    ) {
 
-                                    // =================================================
-                                    // FRAME SCALE
-                                    // =================================================
+                        model.scale.set(
+                            scaleFactor,
+                            scaleFactor,
+                            scaleFactor
+                        );
+                    }
 
-                                    const distanceBetweenEyes =
-                                        Math.sqrt(
-                                            Math.pow(
-                                                rightEye[0].x -
-                                                    leftEye[0].x,
-                                                2
-                                            ) +
-                                            Math.pow(
-                                                rightEye[0].y -
-                                                    leftEye[0].y,
-                                                2
-                                            )
-                                        );
+                } catch (faceError) {
 
-                                    const scaleFactor =
-                                        distanceBetweenEyes /
-                                        200;
-
-                                    if (
-                                        !isNaN(
-                                            scaleFactor
-                                        ) &&
-                                        scaleFactor > 0
-                                    ) {
-
-                                        model.scale.set(
-                                            scaleFactor,
-                                            scaleFactor,
-                                            scaleFactor
-                                        );
-                                    }
-                                }
-
-                            } catch (faceError) {
-
-                                console.error(
-                                    '❌ Face detection error:',
-                                    faceError
-                                );
-                            }
-
-                        },
-                        100
+                    console.error(
+                        '❌ Face detection error:',
+                        faceError
                     );
+
+                    if (status) {
+                        status.textContent =
+                            '❌ Face detection error';
+                    }
                 }
-            );
 
+            },
+            100
+        );
+    }
+);
         } catch (err) {
 
             console.error(
