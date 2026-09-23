@@ -287,6 +287,38 @@
     .preview-info h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.25rem; }
     .preview-info .price-tag { color: var(--blue); font-size: 1.1rem; font-weight: 800; margin-bottom: 0.75rem; }
     .preview-info p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1.25rem; }
+    
+    /* ── MOBILE TRY-ON MODE ── */
+body.mobile-try-on-mode > *:not(#faceFilterModal) {
+    display: none !important;
+}
+
+body.mobile-try-on-mode {
+    overflow: hidden;
+    background: #000;
+}
+
+body.mobile-try-on-mode #faceFilterModal {
+    display: flex !important;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 9999;
+}
+
+body.mobile-try-on-mode #faceFilterModal .modal-content {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    border-radius: 0;
+}
+
+body.mobile-try-on-mode #faceFilterModal #modal-container {
+    height: calc(100vh - 56px);
+}
+  
   </style>
 </head>
 
@@ -481,21 +513,34 @@
   <script defer src="./face-api.min.js"></script>
   <script defer src="./scripts.js" type="module"></script>
 
-  <!-- MOBILE WEBVIEW QUERY PARAM LISTENER -->
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const targetFrameId = urlParams.get('frameId');
+ <!-- MOBILE WEBVIEW QUERY PARAM LISTENER -->
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
 
-      if (targetFrameId) {
-        const checkExist = setInterval(() => {
-          if (typeof window.openTryOnModal === 'function') {
-            window.openTryOnModal(targetFrameId);
-            clearInterval(checkExist);
-          }
-        }, 500);
-      }
-    });
-  </script>
+    const targetFrameId = urlParams.get('frameId');
+    const mobileTryOn =
+      urlParams.get('mobileTryOn') === 'true';
+
+    if (mobileTryOn && targetFrameId) {
+
+      // Hide the normal website and show only Try-On
+      document.body.classList.add('mobile-try-on-mode');
+
+      const checkExist = setInterval(() => {
+        if (typeof window.openTryOnModal === 'function') {
+          clearInterval(checkExist);
+
+          console.log(
+            '📱 Opening mobile Try-On for frame:',
+            targetFrameId
+          );
+
+          window.openTryOnModal(targetFrameId);
+        }
+      }, 500);
+    }
+  });
+</script>
 </body>
 </html>
