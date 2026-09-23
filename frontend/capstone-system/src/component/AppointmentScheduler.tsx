@@ -190,6 +190,34 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
     }
   };
 
+  const handleCancelRequest = async (appointment: Appointment) => {
+  const targetId = appointment.id || appointment.appointment_id;
+
+  if (!targetId) {
+    alert('Error: Cannot cancel request. Missing Appointment ID.');
+    return;
+  }
+
+  if (
+    !window.confirm(
+      'Cancel this mobile appointment request? The patient request will be removed from the request queue.'
+    )
+  ) {
+    return;
+  }
+
+  try {
+    await appointmentService.updateStatus(targetId, 'Cancelled');
+
+    await loadSchedule();
+
+    alert('Mobile appointment request cancelled successfully.');
+  } catch (err: any) {
+    alert(`Error cancelling request: ${err.message}`);
+  }
+};
+
+
   // Filter patients using single 'name' and 'patient_id' properties
   const filteredPatientOptions = patients.filter(p => {
     const pid = p.patient_id || '';
@@ -634,15 +662,25 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
                           <strong>Purpose:</strong> {req.purpose_of_visit}
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 self-end sm:self-center">
-                        <button 
-                          onClick={() => handleAcceptRequest(req)}
-                          className="flex items-center space-x-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow-sm transition-colors"
-                        >
-                          <Check size={12} />
-                          <span>Accept</span>
-                        </button>
-                      </div>
+                     <div className="flex items-center space-x-2 self-end sm:self-center">
+  {/* Cancel Request */}
+  <button
+    onClick={() => handleCancelRequest(req)}
+    className="flex items-center space-x-1 px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 hover:text-rose-700 font-medium rounded-lg transition-colors"
+  >
+    <Ban size={12} />
+    <span>Cancel</span>
+  </button>
+
+  {/* Accept Request */}
+  <button
+    onClick={() => handleAcceptRequest(req)}
+    className="flex items-center space-x-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow-sm transition-colors"
+  >
+    <Check size={12} />
+    <span>Accept</span>
+  </button>
+</div>
                     </div>
                   );
                 })
