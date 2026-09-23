@@ -45,3 +45,7 @@ app.listen(PORT, () => {
     console.log(`Server status: running active on port ${PORT}`);
 });
 
+app.get('/api/health', (req, res) => {
+    res.json({ success: true, message: "Mobile app is successfully connected to Render!" });
+});
+
