@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
 
     // =====================================================
-    // STATE
+    // STATE VARIABLES
     // =====================================================
 
     const apiBase =
@@ -13,12 +13,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     let selectedCategory = 'All';
 
     // =====================================================
-    // URL / MOBILE TRY-ON MODE
+    // URL / MOBILE TRY-ON
     // =====================================================
 
-    const urlParams = new URLSearchParams(
-        window.location.search
-    );
+    const urlParams =
+        new URLSearchParams(
+            window.location.search
+        );
 
     const targetFrameId =
         urlParams.get('frameId');
@@ -27,70 +28,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         urlParams.get('mobileTryOn') === 'true';
 
     // =====================================================
-    // THREE.JS SETUP
+    // THREE.JS & VTO SETUP
     // =====================================================
 
-    const scene = new THREE.Scene();
+    const scene =
+        new THREE.Scene();
 
-    const camera = new THREE.PerspectiveCamera(
-        75,
-        1,
-        0.1,
-        100
-    );
+    const camera =
+        new THREE.PerspectiveCamera(
+            75,
+            1,
+            0.1,
+            100
+        );
 
-    const renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: true
-    });
-
-    const modalContainer =
-        document.getElementById('modal-container');
-
-    const vtoModal =
-        document.getElementById('faceFilterModal');
-
-    const previewModal =
-        document.getElementById('previewModal');
-
-    let model = null;
-    let rendererAttached = false;
-
-    // =====================================================
-    // CAMERA / VIDEO STATE
-    // =====================================================
-
-    let currentStream = null;
-    let currentVideo = null;
-    let currentVideoTexture = null;
-    let currentVideoPlane = null;
-
-    let detectionInterval = null;
-    let detectionRunning = false;
-    let faceDetectionStarted = false;
-
-    // Face detection options
-    const faceDetectionOptions =
-        new faceapi.SsdMobilenetv1Options({
-            minConfidence: 0.3
+    const renderer =
+        new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true
         });
 
-    // =====================================================
-    // FRAME SMOOTHING
-    // =====================================================
+    const modalContainer =
+        document.getElementById(
+            'modal-container'
+        );
 
-    let smoothedX = null;
-    let smoothedY = null;
-    let smoothedZ = null;
+    const vtoModal =
+        document.getElementById(
+            'faceFilterModal'
+        );
 
-    let smoothedRotation = null;
-    let smoothedScale = null;
+    const previewModal =
+        document.getElementById(
+            'previewModal'
+        );
 
-    // Higher = more responsive
-    // Lower = smoother
-    const POSITION_SMOOTHING = 0.35;
-    const ROTATION_SMOOTHING = 0.30;
-    const SCALE_SMOOTHING = 0.30;
+    let model = null;
+
+    let rendererAttached =
+        false;
+
+    let animationStarted =
+        false;
+
+    let currentStream =
+        null;
+
+    let currentVideo =
+        null;
+
+    let currentVideoTexture =
+        null;
+
+    let currentVideoPlane =
+        null;
+
+    let detectionTimer =
+        null;
+
+    let faceDetectionStarted =
+        false;
+
+    let detectionRunning =
+        false;
 
     // =====================================================
     // CAMERA POSITION
@@ -144,43 +144,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         new THREE.GLTFLoader();
 
     // =====================================================
-    // HELPERS
-    // =====================================================
-
-    function flutterLog(message) {
-
-        console.log(message);
-
-        if (window.FlutterLog) {
-            try {
-                FlutterLog.postMessage(
-                    String(message)
-                );
-            } catch (error) {
-                console.warn(
-                    'FlutterLog failed:',
-                    error
-                );
-            }
-        }
-    }
-
-    function setStatus(message) {
-
-        const status =
-            document.getElementById(
-                'vto-status'
-            );
-
-        if (status) {
-            status.textContent =
-                message;
-        }
-
-        flutterLog(message);
-    }
-
-    // =====================================================
     // RENDERER
     // =====================================================
 
@@ -206,10 +169,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             height
         );
 
+        // Limit pixel ratio for mobile performance.
+        // This does NOT change the frame calibration.
         renderer.setPixelRatio(
             Math.min(
                 window.devicePixelRatio || 1,
-                2
+                1.5
             )
         );
 
@@ -237,7 +202,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         camera.updateProjectionMatrix();
 
-        rendererAttached = true;
+        rendererAttached =
+            true;
     }
 
     // =====================================================
@@ -279,7 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderer.setPixelRatio(
             Math.min(
                 window.devicePixelRatio || 1,
-                2
+                1.5
             )
         );
     }
@@ -290,18 +256,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     );
 
     // =====================================================
-    // THREE.JS ANIMATION
+    // ANIMATION
     // =====================================================
-
-    let animationStarted = false;
 
     function animate() {
 
+        // Prevent multiple animation loops.
         if (animationStarted) {
             return;
         }
 
-        animationStarted = true;
+        animationStarted =
+            true;
 
         function renderLoop() {
 
@@ -319,7 +285,229 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =====================================================
-    // SCREEN → THREE.JS WORLD
+    // FLUTTER LOG HELPER
+    // =====================================================
+
+    function flutterLog(
+        message
+    ) {
+
+        console.log(
+            message
+        );
+
+        if (
+            window.FlutterLog
+        ) {
+
+            try {
+
+                FlutterLog.postMessage(
+                    String(message)
+                );
+
+            } catch (error) {
+
+                console.warn(
+                    'FlutterLog error:',
+                    error
+                );
+            }
+        }
+    }
+
+    // =====================================================
+    // STATUS
+    // =====================================================
+
+    function setStatus(
+        message
+    ) {
+
+        const status =
+            document.getElementById(
+                'vto-status'
+            );
+
+        if (status) {
+
+            status.textContent =
+                message;
+        }
+    }
+
+    // =====================================================
+    // LOAD 3D MODEL
+    // =====================================================
+
+    function loadGLTFModel(
+        filePath
+    ) {
+
+        console.log(
+            '🥽 STARTING GLTF LOAD:',
+            filePath
+        );
+
+        flutterLog(
+            '🥽 STARTING GLTF LOAD: ' +
+            filePath
+        );
+
+        if (vtoModal) {
+
+            vtoModal.style.display =
+                'flex';
+        }
+
+        attachRenderer();
+
+        // =================================================
+        // STOP PREVIOUS CAMERA
+        // =================================================
+
+        stopCamera();
+
+        // =================================================
+        // REMOVE PREVIOUS VIDEO PLANE
+        // =================================================
+
+        removeVideoPlane();
+
+        // =================================================
+        // REMOVE PREVIOUS MODEL
+        // =================================================
+
+        removeCurrentModel();
+
+        // =================================================
+        // LOAD MODEL
+        // =================================================
+
+        loader.load(
+
+            filePath,
+
+            function (gltf) {
+
+                // -----------------------------------------
+                // MODEL SUCCESSFULLY LOADED
+                // -----------------------------------------
+
+                console.log(
+                    '🕶️ FRAME MODEL LOADED'
+                );
+
+                flutterLog(
+                    '🕶️ FRAME MODEL LOADED'
+                );
+
+                // -----------------------------------------
+                // SET MODEL
+                // -----------------------------------------
+
+                model =
+                    gltf.scene;
+
+                // IMPORTANT:
+                // Keep original base scale.
+                model.scale.set(
+                    0.1,
+                    0.1,
+                    0.1
+                );
+
+                // IMPORTANT:
+                // Keep original model orientation.
+                model.rotation.y =
+                    Math.PI;
+
+                // Initial off-screen position.
+                model.position.set(
+                    -5,
+                    0,
+                    -5
+                );
+
+                scene.add(
+                    model
+                );
+
+                console.log(
+                    '🕶️ MODEL ADDED TO THREE.JS SCENE'
+                );
+
+                flutterLog(
+                    '🕶️ MODEL ADDED TO THREE.JS SCENE'
+                );
+
+                console.log(
+                    '🕶️ INITIAL MODEL POSITION:',
+                    model.position.x,
+                    model.position.y,
+                    model.position.z
+                );
+
+                console.log(
+                    '🕶️ INITIAL MODEL SCALE:',
+                    model.scale.x,
+                    model.scale.y,
+                    model.scale.z
+                );
+
+                flutterLog(
+                    `🕶️ INITIAL MODEL POSITION: ` +
+                    `${model.position.x}, ` +
+                    `${model.position.y}, ` +
+                    `${model.position.z}`
+                );
+
+                flutterLog(
+                    `🕶️ INITIAL MODEL SCALE: ` +
+                    `${model.scale.x}, ` +
+                    `${model.scale.y}, ` +
+                    `${model.scale.z}`
+                );
+
+                // -----------------------------------------
+                // START THREE.JS
+                // -----------------------------------------
+
+                animate();
+
+                // -----------------------------------------
+                // START CAMERA + FACE TRACKING
+                // -----------------------------------------
+
+                run();
+            },
+
+            undefined,
+
+            function (err) {
+
+                console.error(
+                    '❌ Error loading GLTF model:',
+                    err
+                );
+
+                flutterLog(
+                    '❌ GLTF LOAD ERROR: ' +
+                    (
+                        err.message ||
+                        err
+                    )
+                );
+
+                setStatus(
+                    '❌ Failed to load 3D model.'
+                );
+            }
+        );
+    }
+
+    // =====================================================
+    // SCREEN TO WORLD
     // =====================================================
 
     function screenToWorldCoordinates(
@@ -333,10 +521,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         } = displaySize;
 
         const x =
-            (screenPoint.x / width) * 2 - 1;
+            (screenPoint.x / width) *
+            2 -
+            1;
 
         const y =
-            -(screenPoint.y / height) * 2 + 1;
+            -(screenPoint.y / height) *
+            2 +
+            1;
 
         const vector =
             new THREE.Vector3(
@@ -368,126 +560,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =====================================================
-    // SMOOTH VALUE
-    // =====================================================
-
-    function smoothValue(
-        current,
-        target,
-        amount
-    ) {
-
-        if (
-            current === null ||
-            current === undefined
-        ) {
-            return target;
-        }
-
-        return (
-            current +
-            (target - current) *
-            amount
-        );
-    }
-
-    // =====================================================
-    // SMOOTH ANGLE
-    // =====================================================
-
-    function smoothAngle(
-        current,
-        target,
-        amount
-    ) {
-
-        if (
-            current === null ||
-            current === undefined
-        ) {
-            return target;
-        }
-
-        let difference =
-            target - current;
-
-        while (
-            difference > Math.PI
-        ) {
-            difference -=
-                Math.PI * 2;
-        }
-
-        while (
-            difference < -Math.PI
-        ) {
-            difference +=
-                Math.PI * 2;
-        }
-
-        return (
-            current +
-            difference * amount
-        );
-    }
-
-    // =====================================================
-    // RESET TRACKING
-    // =====================================================
-
-    function resetTracking() {
-
-        smoothedX = null;
-        smoothedY = null;
-        smoothedZ = null;
-
-        smoothedRotation = null;
-        smoothedScale = null;
-    }
-
-    // =====================================================
     // STOP CAMERA
     // =====================================================
 
     function stopCamera() {
 
-        if (detectionInterval) {
+        // Stop face detection timer.
+        if (detectionTimer) {
 
-            clearInterval(
-                detectionInterval
+            clearTimeout(
+                detectionTimer
             );
 
-            detectionInterval =
+            detectionTimer =
                 null;
         }
-
-        detectionRunning =
-            false;
 
         faceDetectionStarted =
             false;
 
+        detectionRunning =
+            false;
+
+        // Stop camera tracks.
         if (currentStream) {
 
             currentStream
                 .getTracks()
-                .forEach(track => {
+                .forEach(
+                    track => {
 
-                    try {
-                        track.stop();
-                    } catch (error) {
-                        console.warn(
-                            'Camera track stop error:',
-                            error
-                        );
+                        try {
+
+                            track.stop();
+
+                        } catch (error) {
+
+                            console.warn(
+                                'Camera track stop error:',
+                                error
+                            );
+                        }
                     }
-
-                });
+                );
 
             currentStream =
                 null;
         }
 
+        // Remove current video.
         if (currentVideo) {
 
             try {
@@ -496,6 +617,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 currentVideo.srcObject =
                     null;
+
+                currentVideo.remove();
 
             } catch (error) {
 
@@ -508,8 +631,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentVideo =
                 null;
         }
-
-        resetTracking();
     }
 
     // =====================================================
@@ -518,9 +639,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function removeVideoPlane() {
 
-        if (
-            currentVideoPlane
-        ) {
+        if (currentVideoPlane) {
 
             scene.remove(
                 currentVideoPlane
@@ -530,7 +649,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentVideoPlane.geometry
             ) {
 
-                currentVideoPlane.geometry
+                currentVideoPlane
+                    .geometry
                     .dispose();
             }
 
@@ -538,7 +658,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentVideoPlane.material
             ) {
 
-                currentVideoPlane.material
+                currentVideoPlane
+                    .material
                     .dispose();
             }
 
@@ -551,8 +672,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         ) {
 
             try {
-                currentVideoTexture.dispose();
+
+                currentVideoTexture
+                    .dispose();
+
             } catch (error) {
+
                 console.warn(
                     'Video texture cleanup error:',
                     error
@@ -578,71 +703,119 @@ document.addEventListener('DOMContentLoaded', async () => {
             model
         );
 
+        // Dispose geometries/materials
+        // to reduce GPU memory usage.
+        model.traverse(
+            object => {
+
+                if (
+                    object.geometry
+                ) {
+
+                    object.geometry
+                        .dispose();
+                }
+
+                if (
+                    object.material
+                ) {
+
+                    if (
+                        Array.isArray(
+                            object.material
+                        )
+                    ) {
+
+                        object.material
+                            .forEach(
+                                material => {
+
+                                    if (
+                                        material.map
+                                    ) {
+
+                                        material
+                                            .map
+                                            .dispose();
+                                    }
+
+                                    material
+                                        .dispose();
+                                }
+                            );
+
+                    } else {
+
+                        if (
+                            object.material.map
+                        ) {
+
+                            object.material
+                                .map
+                                .dispose();
+                        }
+
+                        object.material
+                            .dispose();
+                    }
+                }
+            }
+        );
+
         model =
             null;
-
-        resetTracking();
     }
 
     // =====================================================
-    // CAMERA VIDEO
+    // CAMERA + VIDEO + FACE TRACKING
     // =====================================================
 
-    async function startCamera() {
-
-        stopCamera();
-
-        removeVideoPlane();
-
-        setStatus(
-            '📷 Starting camera...'
-        );
+    async function run() {
 
         try {
 
-            if (
-                !navigator.mediaDevices ||
-                !navigator.mediaDevices.getUserMedia
-            ) {
+            console.log(
+                '📷 Starting camera...'
+            );
 
-                throw new Error(
-                    'Camera API is not available.'
-                );
-            }
+            flutterLog(
+                '📷 STARTING CAMERA'
+            );
 
-            const constraints =
-                mobileTryOn
-                    ? {
-                        audio: false,
-                        video: {
-                            facingMode: {
-                                ideal: 'user'
-                            },
-                            width: {
-                                ideal: 1280
-                            },
-                            height: {
-                                ideal: 720
-                            }
-                        }
-                    }
-                    : {
-                        audio: false,
-                        video: true
-                    };
+            // =================================================
+            // GET CAMERA STREAM
+            // =================================================
 
             const stream =
-                await navigator.mediaDevices
-                    .getUserMedia(
-                        constraints
-                    );
+                await navigator
+                    .mediaDevices
+                    .getUserMedia({
+
+                        video:
+                            mobileTryOn
+                                ? {
+                                    facingMode:
+                                        'user'
+                                }
+                                : true,
+
+                        audio: false
+                    });
 
             currentStream =
                 stream;
 
+            console.log(
+                '📷 Camera stream obtained'
+            );
+
             flutterLog(
                 '📷 CAMERA STREAM OBTAINED'
             );
+
+            // =================================================
+            // CREATE VIDEO
+            // =================================================
 
             const video =
                 document.createElement(
@@ -684,7 +857,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ''
             );
 
-            // Keep video hidden because
+            // Keep video hidden.
             // Three.js displays the camera.
             video.style.position =
                 'fixed';
@@ -705,19 +878,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                 video
             );
 
+            // =================================================
+            // PLAY VIDEO
+            // =================================================
+
             try {
 
                 await video.play();
 
+                console.log(
+                    '✅ Camera video playing:',
+                    video.videoWidth,
+                    'x',
+                    video.videoHeight
+                );
+
+                flutterLog(
+                    `✅ CAMERA VIDEO PLAYING: ` +
+                    `${video.videoWidth}x${video.videoHeight}`
+                );
+
             } catch (playError) {
 
-                console.warn(
-                    'video.play() warning:',
+                console.error(
+                    '❌ Video play failed:',
                     playError
                 );
 
                 flutterLog(
-                    '⚠️ VIDEO PLAY WARNING: ' +
+                    '❌ VIDEO PLAY FAILED: ' +
                     (
                         playError.message ||
                         playError
@@ -725,7 +914,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 );
             }
 
-            let attempts = 0;
+            // =================================================
+            // WAIT FOR VIDEO FRAMES
+            // =================================================
+
+            let attempts =
+                0;
 
             while (
                 (
@@ -757,12 +951,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 );
             }
 
-            flutterLog(
-                `🎥 VIDEO READY: ${video.videoWidth}x${video.videoHeight}`
+            console.log(
+                '🎥 VIDEO READY:',
+                video.videoWidth,
+                'x',
+                video.videoHeight
             );
 
             // =================================================
-            // THREE VIDEO TEXTURE
+            // THREE.JS VIDEO TEXTURE
             // =================================================
 
             const videoTexture =
@@ -783,7 +980,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 videoTexture;
 
             // =================================================
-            // CAMERA BACKGROUND
+            // CAMERA BACKGROUND PLANE
             // =================================================
 
             const geometry =
@@ -794,8 +991,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const material =
                 new THREE.MeshBasicMaterial({
-                    map: videoTexture,
-                    side: THREE.DoubleSide
+                    map:
+                        videoTexture,
+
+                    side:
+                        THREE.DoubleSide
                 });
 
             const plane =
@@ -817,656 +1017,488 @@ document.addEventListener('DOMContentLoaded', async () => {
                 plane
             );
 
+            console.log(
+                '🎥 Camera plane added'
+            );
+
             flutterLog(
                 '🎥 CAMERA PLANE ADDED'
             );
 
-            return video;
+            // =================================================
+            // FACE DETECTION OPTIONS
+            // =================================================
 
-        } catch (error) {
+            // Create this ONCE.
+            // Do not recreate it every detection.
+            const detectorOptions =
+                new faceapi
+                    .SsdMobilenetv1Options({
+                        minConfidence:
+                            0.3,
+
+                        inputSize:
+                            320
+                    });
+
+            // =================================================
+            // FACE DETECTION
+            // =================================================
+
+            async function detectFace() {
+
+                if (
+                    !model ||
+                    !video ||
+                    video.readyState < 2
+                ) {
+                    return;
+                }
+
+                // Prevent overlapping
+                // face-api requests.
+                if (
+                    detectionRunning
+                ) {
+                    return;
+                }
+
+                detectionRunning =
+                    true;
+
+                try {
+
+                    // =================================================
+                    // ONLY DETECT ONE FACE
+                    // =================================================
+
+                    const detection =
+                        await faceapi
+                            .detectSingleFace(
+                                video,
+                                detectorOptions
+                            )
+                            .withFaceLandmarks();
+
+                    // =================================================
+                    // NO FACE
+                    // =================================================
+
+                    if (!detection) {
+
+                        const status =
+                            document.getElementById(
+                                'vto-status'
+                            );
+
+                        if (status) {
+
+                            status.textContent =
+                                '🔴 No face detected';
+                        }
+
+                        return;
+                    }
+
+                    // =================================================
+                    // FACE DETECTED
+                    // =================================================
+
+                    const leftEye =
+                        detection
+                            .landmarks
+                            .getLeftEye();
+
+                    const rightEye =
+                        detection
+                            .landmarks
+                            .getRightEye();
+
+                    if (
+                        !leftEye ||
+                        !rightEye ||
+                        leftEye.length === 0 ||
+                        rightEye.length === 0
+                    ) {
+
+                        return;
+                    }
+
+                    // =================================================
+                    // EYE CENTER
+                    //
+                    // IMPORTANT:
+                    // Same calculation as your working code.
+                    // =================================================
+
+                    const centerX =
+                        (
+                            leftEye[0].x +
+                            rightEye[0].x
+                        ) / 2;
+
+                    const centerY =
+                        (
+                            leftEye[0].y +
+                            rightEye[0].y
+                        ) / 2;
+
+                    // =================================================
+                    // VIDEO SIZE
+                    // =================================================
+
+                    const displaySize = {
+
+                        width:
+                            video.videoWidth,
+
+                        height:
+                            video.videoHeight
+                    };
+
+                    // =================================================
+                    // CONVERT FACE POSITION
+                    // =================================================
+
+                    const worldCenterPoint =
+                        screenToWorldCoordinates(
+                            {
+                                x:
+                                    centerX,
+
+                                y:
+                                    centerY
+                            },
+                            displaySize
+                        );
+
+                    // =================================================
+                    // POSITION OFFSET
+                    //
+                    // KEEP ORIGINAL VALUE.
+                    // =================================================
+
+                    const eyeToEyebrowOffset =
+                        1;
+
+                    const targetX =
+                        worldCenterPoint.x;
+
+                    const targetY =
+                        worldCenterPoint.y -
+                        eyeToEyebrowOffset;
+
+                    const targetZ =
+                        worldCenterPoint.z;
+
+                    // =================================================
+                    // MOVE FRAME
+                    // =================================================
+
+                    if (
+                        !isNaN(targetX) &&
+                        !isNaN(targetY) &&
+                        !isNaN(targetZ)
+                    ) {
+
+                        model.position.set(
+                            targetX,
+                            targetY,
+                            targetZ
+                        );
+                    }
+
+                    // =================================================
+                    // ROTATION
+                    //
+                    // KEEP ORIGINAL CALCULATION.
+                    // =================================================
+
+                    const deltaY =
+                        rightEye[0].y -
+                        leftEye[0].y;
+
+                    const deltaX =
+                        rightEye[0].x -
+                        leftEye[0].x;
+
+                    const angle =
+                        Math.atan2(
+                            deltaY,
+                            deltaX
+                        );
+
+                    model.rotation.z =
+                        angle;
+
+                    // =================================================
+                    // FRAME SCALE
+                    //
+                    // IMPORTANT:
+                    // DO NOT CHANGE THIS FORMULA.
+                    //
+                    // This preserves your current
+                    // frame size calibration.
+                    // =================================================
+
+                    const distanceBetweenEyes =
+                        Math.sqrt(
+
+                            Math.pow(
+                                rightEye[0].x -
+                                leftEye[0].x,
+                                2
+                            ) +
+
+                            Math.pow(
+                                rightEye[0].y -
+                                leftEye[0].y,
+                                2
+                            )
+                        );
+
+                    const scaleFactor =
+                        distanceBetweenEyes /
+                        200;
+
+                    if (
+                        !isNaN(
+                            scaleFactor
+                        ) &&
+                        scaleFactor > 0
+                    ) {
+
+                        model.scale.set(
+                            scaleFactor,
+                            scaleFactor,
+                            scaleFactor
+                        );
+                    }
+
+                    // =================================================
+                    // STATUS
+                    // =================================================
+
+                    const status =
+                        document.getElementById(
+                            'vto-status'
+                        );
+
+                    if (status) {
+
+                        const score =
+                            detection
+                                .detection
+                                .score;
+
+                        status.textContent =
+                            `🟢 Face detected (${Math.round(score * 100)}%)`;
+                    }
+
+                } catch (faceError) {
+
+                    console.error(
+                        '❌ FACE DETECTION ERROR:',
+                        faceError
+                    );
+
+                    // Only send actual errors
+                    // to Flutter.
+                    //
+                    // Do NOT send position,
+                    // scale, eye coordinates,
+                    // etc. every detection.
+
+                    flutterLog(
+                        '❌ FACE DETECTION ERROR: ' +
+                        (
+                            faceError.message ||
+                            faceError
+                        )
+                    );
+
+                    const status =
+                        document.getElementById(
+                            'vto-status'
+                        );
+
+                    if (status) {
+
+                        status.textContent =
+                            '❌ Face detection error';
+                    }
+
+                } finally {
+
+                    detectionRunning =
+                        false;
+                }
+            }
+
+            // =================================================
+            // DETECTION LOOP
+            // =================================================
+
+            async function detectionLoop() {
+
+                if (
+                    !faceDetectionStarted
+                ) {
+                    return;
+                }
+
+                await detectFace();
+
+                if (
+                    !faceDetectionStarted
+                ) {
+                    return;
+                }
+
+                // 200ms = approximately
+                // 5 face detections per second.
+                //
+                // Three.js still renders continuously.
+                // Only face detection is reduced.
+                detectionTimer =
+                    setTimeout(
+                        detectionLoop,
+                        200
+                    );
+            }
+
+            // =================================================
+            // START FACE DETECTION
+            // =================================================
+
+            async function startFaceDetection() {
+
+                if (
+                    faceDetectionStarted
+                ) {
+                    return;
+                }
+
+                faceDetectionStarted =
+                    true;
+
+                console.log(
+                    '🙂 FACE DETECTION STARTED'
+                );
+
+                flutterLog(
+                    '🙂 FACE DETECTION STARTED'
+                );
+
+                const status =
+                    document.getElementById(
+                        'vto-status'
+                    );
+
+                if (status) {
+
+                    status.textContent =
+                        '🔍 Looking for your face...';
+                }
+
+                detectionLoop();
+            }
+
+            // =================================================
+            // VIDEO PLAYING
+            // =================================================
+
+            video.addEventListener(
+                'playing',
+                () => {
+
+                    console.log(
+                        '🎥 VIDEO PLAYING'
+                    );
+
+                    startFaceDetection();
+                },
+                {
+                    once: true
+                }
+            );
+
+            // =================================================
+            // VIDEO CANPLAY
+            // =================================================
+
+            video.addEventListener(
+                'canplay',
+                () => {
+
+                    console.log(
+                        '🎥 VIDEO CANPLAY'
+                    );
+
+                    if (
+                        video.videoWidth > 0 &&
+                        video.videoHeight > 0
+                    ) {
+
+                        startFaceDetection();
+                    }
+                },
+                {
+                    once: true
+                }
+            );
+
+            // =================================================
+            // VIDEO ALREADY READY
+            // =================================================
+
+            if (
+                video.readyState >= 2 &&
+                video.videoWidth > 0 &&
+                video.videoHeight > 0
+            ) {
+
+                console.log(
+                    '📱 VIDEO ALREADY READY'
+                );
+
+                startFaceDetection();
+            }
+
+        } catch (err) {
 
             console.error(
-                'Camera error:',
-                error
+                '❌ Unable to access camera:',
+                err
             );
 
             flutterLog(
                 '❌ CAMERA ERROR: ' +
                 (
-                    error.message ||
-                    error
+                    err.message ||
+                    err
                 )
             );
 
-            setStatus(
-                `❌ Camera error: ${
-                    error.name || ''
-                } ${
-                    error.message || error
-                }`
-            );
+            const status =
+                document.getElementById(
+                    'vto-status'
+                );
 
-            throw error;
+            if (status) {
+
+                status.textContent =
+                    `Camera error: ${
+                        err.name || ''
+                    } ${
+                        err.message || err
+                    }`;
+            }
         }
     }
 
     // =====================================================
-    // FACE DETECTION
-    // =====================================================
-
-    async function startFaceDetection(
-        video
-    ) {
-
-        if (
-            faceDetectionStarted
-        ) {
-            return;
-        }
-
-        faceDetectionStarted =
-            true;
-
-        flutterLog(
-            '🙂 STARTING FACE DETECTION'
-        );
-
-        // Wait for real video frames.
-        let attempts = 0;
-
-        while (
-            (
-                video.readyState < 2 ||
-                video.videoWidth === 0 ||
-                video.videoHeight === 0
-            ) &&
-            attempts < 50
-        ) {
-
-            await new Promise(
-                resolve =>
-                    setTimeout(
-                        resolve,
-                        100
-                    )
-            );
-
-            attempts++;
-        }
-
-        if (
-            video.videoWidth === 0 ||
-            video.videoHeight === 0
-        ) {
-
-            flutterLog(
-                '❌ VIDEO HAS NO DIMENSIONS'
-            );
-
-            faceDetectionStarted =
-                false;
-
-            return;
-        }
-
-        const displaySize = {
-            width:
-                video.videoWidth,
-            height:
-                video.videoHeight
-        };
-
-        flutterLog(
-            `🙂 FACE DETECTION VIDEO SIZE: ${displaySize.width}x${displaySize.height}`
-        );
-
-        const status =
-            document.getElementById(
-                'vto-status'
-            );
-
-        if (status) {
-
-            status.textContent =
-                '🔍 Looking for your face...';
-        }
-
-        // =================================================
-        // DETECTION FUNCTION
-        // =================================================
-
-        async function detectFace() {
-
-            if (
-                !model ||
-                !video
-            ) {
-                return;
-            }
-
-            if (
-                video.readyState < 2
-            ) {
-                return;
-            }
-
-            if (
-                detectionRunning
-            ) {
-                return;
-            }
-
-            detectionRunning =
-                true;
-
-            try {
-
-                const detections =
-                    await faceapi
-                        .detectAllFaces(
-                            video,
-                            faceDetectionOptions
-                        )
-                        .withFaceLandmarks();
-
-                // =================================================
-                // NO FACE
-                // =================================================
-
-                if (
-                    !detections ||
-                    detections.length === 0
-                ) {
-
-                    if (status) {
-
-                        status.textContent =
-                            '🔴 No face detected';
-                    }
-
-                    return;
-                }
-
-                // =================================================
-                // FACE FOUND
-                // =================================================
-
-                const detection =
-                    detections[0];
-
-                const score =
-                    detection.detection.score;
-
-                const leftEye =
-                    detection.landmarks
-                        .getLeftEye();
-
-                const rightEye =
-                    detection.landmarks
-                        .getRightEye();
-
-                if (
-                    !leftEye ||
-                    !rightEye ||
-                    leftEye.length === 0 ||
-                    rightEye.length === 0
-                ) {
-
-                    flutterLog(
-                        '⚠️ EYE LANDMARKS NOT FOUND'
-                    );
-
-                    return;
-                }
-
-                if (status) {
-
-                    status.textContent =
-                        `🟢 Face detected (${Math.round(score * 100)}%)`;
-                }
-
-                // =================================================
-                // EYE CENTERS
-                // =================================================
-
-                let leftEyeX = 0;
-                let leftEyeY = 0;
-
-                let rightEyeX = 0;
-                let rightEyeY = 0;
-
-                leftEye.forEach(
-                    point => {
-
-                        leftEyeX +=
-                            point.x;
-
-                        leftEyeY +=
-                            point.y;
-                    }
-                );
-
-                rightEye.forEach(
-                    point => {
-
-                        rightEyeX +=
-                            point.x;
-
-                        rightEyeY +=
-                            point.y;
-                    }
-                );
-
-                leftEyeX /=
-                    leftEye.length;
-
-                leftEyeY /=
-                    leftEye.length;
-
-                rightEyeX /=
-                    rightEye.length;
-
-                rightEyeY /=
-                    rightEye.length;
-
-                // =================================================
-                // FACE CENTER
-                // =================================================
-
-                const centerX =
-                    (
-                        leftEyeX +
-                        rightEyeX
-                    ) / 2;
-
-                const centerY =
-                    (
-                        leftEyeY +
-                        rightEyeY
-                    ) / 2;
-
-                // =================================================
-                // WORLD POSITION
-                // =================================================
-
-                const worldCenter =
-                    screenToWorldCoordinates(
-                        {
-                            x: centerX,
-                            y: centerY
-                        },
-                        displaySize
-                    );
-
-                // Move glasses slightly downward
-                // relative to eye center.
-                const eyeToFrameOffset =
-                    1.0;
-
-                const targetX =
-                    worldCenter.x;
-
-                const targetY =
-                    worldCenter.y -
-                    eyeToFrameOffset;
-
-                const targetZ =
-                    worldCenter.z;
-
-                // =================================================
-                // POSITION SMOOTHING
-                // =================================================
-
-                smoothedX =
-                    smoothValue(
-                        smoothedX,
-                        targetX,
-                        POSITION_SMOOTHING
-                    );
-
-                smoothedY =
-                    smoothValue(
-                        smoothedY,
-                        targetY,
-                        POSITION_SMOOTHING
-                    );
-
-                smoothedZ =
-                    smoothValue(
-                        smoothedZ,
-                        targetZ,
-                        POSITION_SMOOTHING
-                    );
-
-                model.position.set(
-                    smoothedX,
-                    smoothedY,
-                    smoothedZ
-                );
-
-                // =================================================
-                // ROTATION
-                // =================================================
-
-                const deltaY =
-                    rightEyeY -
-                    leftEyeY;
-
-                const deltaX =
-                    rightEyeX -
-                    leftEyeX;
-
-                const targetAngle =
-                    Math.atan2(
-                        deltaY,
-                        deltaX
-                    );
-
-                smoothedRotation =
-                    smoothAngle(
-                        smoothedRotation,
-                        targetAngle,
-                        ROTATION_SMOOTHING
-                    );
-
-                model.rotation.z =
-                    smoothedRotation;
-
-                // =================================================
-                // SCALE
-                // =================================================
-
-                const eyeDistance =
-                    Math.sqrt(
-                        Math.pow(
-                            rightEyeX -
-                            leftEyeX,
-                            2
-                        ) +
-                        Math.pow(
-                            rightEyeY -
-                            leftEyeY,
-                            2
-                        )
-                    );
-
-                // Original scaling basis
-                const targetScale =
-                    eyeDistance /
-                    200;
-
-                if (
-                    targetScale > 0 &&
-                    !isNaN(targetScale)
-                ) {
-
-                    smoothedScale =
-                        smoothValue(
-                            smoothedScale,
-                            targetScale,
-                            SCALE_SMOOTHING
-                        );
-
-                    model.scale.set(
-                        smoothedScale,
-                        smoothedScale,
-                        smoothedScale
-                    );
-                }
-
-            } catch (error) {
-
-                console.error(
-                    'Face detection error:',
-                    error
-                );
-
-                flutterLog(
-                    '❌ FACE DETECTION ERROR: ' +
-                    (
-                        error.message ||
-                        error
-                    )
-                );
-
-            } finally {
-
-                detectionRunning =
-                    false;
-            }
-        }
-
-        // =================================================
-        // START LOOP
-        // =================================================
-
-        flutterLog(
-            '🚀 FACE DETECTION LOOP STARTED'
-        );
-
-        await detectFace();
-
-        if (
-            detectionInterval
-        ) {
-
-            clearInterval(
-                detectionInterval
-            );
-        }
-
-        detectionInterval =
-            setInterval(
-                detectFace,
-                150
-            );
-    }
-
-    // =====================================================
-    // LOAD GLTF MODEL
-    // =====================================================
-
-    function loadGLTFModel(
-        filePath
-    ) {
-
-        if (!filePath) {
-
-            setStatus(
-                '❌ No 3D model URL provided.'
-            );
-
-            return;
-        }
-
-        flutterLog(
-            '🥽 STARTING GLTF LOAD: ' +
-            filePath
-        );
-
-        if (vtoModal) {
-
-            vtoModal.style.display =
-                'flex';
-        }
-
-        attachRenderer();
-
-        // Stop previous Try-On
-        stopCamera();
-
-        removeVideoPlane();
-
-        removeCurrentModel();
-
-        loader.load(
-
-            filePath,
-
-            async function (gltf) {
-
-                flutterLog(
-                    '🕶️ FRAME MODEL LOADED'
-                );
-
-                model =
-                    gltf.scene;
-
-                // Initial scale.
-                model.scale.set(
-                    0.1,
-                    0.1,
-                    0.1
-                );
-
-                // Preserve your current
-                // model orientation.
-                model.rotation.y =
-                    Math.PI;
-
-                // Initial off-face position.
-                model.position.set(
-                    -5,
-                    0,
-                    -5
-                );
-
-                scene.add(
-                    model
-                );
-
-                flutterLog(
-                    '🕶️ MODEL ADDED TO THREE.JS SCENE'
-                );
-
-                flutterLog(
-                    `🕶️ INITIAL MODEL POSITION: ${
-                        model.position.x
-                    }, ${
-                        model.position.y
-                    }, ${
-                        model.position.z
-                    }`
-                );
-
-                flutterLog(
-                    `🕶️ INITIAL MODEL SCALE: ${
-                        model.scale.x
-                    }, ${
-                        model.scale.y
-                    }, ${
-                        model.scale.z
-                    }`
-                );
-
-                animate();
-
-                setStatus(
-                    '📷 Starting camera...'
-                );
-
-                try {
-
-                    const video =
-                        await startCamera();
-
-                    // =================================================
-                    // VIDEO EVENTS
-                    // =================================================
-
-                    video.addEventListener(
-                        'playing',
-                        () => {
-
-                            flutterLog(
-                                '🎥 VIDEO PLAYING'
-                            );
-
-                            startFaceDetection(
-                                video
-                            );
-                        },
-                        {
-                            once: true
-                        }
-                    );
-
-                    video.addEventListener(
-                        'canplay',
-                        () => {
-
-                            flutterLog(
-                                '🎥 VIDEO CANPLAY'
-                            );
-
-                            if (
-                                video.videoWidth > 0 &&
-                                video.videoHeight > 0
-                            ) {
-
-                                startFaceDetection(
-                                    video
-                                );
-                            }
-                        },
-                        {
-                            once: true
-                        }
-                    );
-
-                    // Video may already be playing
-                    if (
-                        video.readyState >= 2 &&
-                        video.videoWidth > 0 &&
-                        video.videoHeight > 0
-                    ) {
-
-                        flutterLog(
-                            '📱 VIDEO ALREADY READY'
-                        );
-
-                        startFaceDetection(
-                            video
-                        );
-                    }
-
-                } catch (cameraError) {
-
-                    console.error(
-                        'Camera startup failed:',
-                        cameraError
-                    );
-
-                }
-
-            },
-
-            undefined,
-
-            function (error) {
-
-                console.error(
-                    '❌ GLTF LOAD ERROR:',
-                    error
-                );
-
-                flutterLog(
-                    '❌ GLTF LOAD ERROR: ' +
-                    (
-                        error.message ||
-                        error
-                    )
-                );
-
-                setStatus(
-                    '❌ Failed to load 3D model.'
-                );
-            }
-        );
-    }
-
-    // =====================================================
-    // PREVIEW MODAL
+    // DETAILS PREVIEW MODAL
     // =====================================================
 
     function openPreviewModal(
@@ -1506,17 +1538,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             );
 
         if (image) {
+
             image.src =
                 imgUrl;
         }
 
         if (title) {
+
             title.textContent =
                 frame.name ||
                 'Eyeglass Frame';
         }
 
         if (price) {
+
             price.textContent =
                 `₱${Number(
                     frame.price || 0
@@ -1532,7 +1567,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }. High-quality frame designed for comfort and durability.`;
         }
 
-        if (tryOnBtn) {
+        if (
+            tryOnBtn
+        ) {
 
             if (
                 isConverted &&
@@ -1585,7 +1622,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =====================================================
-    // CLOSE PREVIEW
+    // CLOSE PREVIEW MODAL
     // =====================================================
 
     function closePreviewModal() {
@@ -1624,7 +1661,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        frameGrid.innerHTML = '';
+        frameGrid.innerHTML =
+            '';
 
         framesToRender.forEach(
             frame => {
@@ -1667,7 +1705,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const cleanRawImg =
                     rawImg
                         ? (
-                            rawImg.startsWith('/')
+                            rawImg.startsWith(
+                                '/'
+                            )
                                 ? rawImg
                                 : `/${rawImg}`
                         )
@@ -1693,12 +1733,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     'frame-card';
 
                 card.innerHTML = `
+
                     <div class="frame-img-box">
+
                         <img
                             src="${imgUrl}"
                             alt="${frame.name || 'Frame'}"
                             onerror="this.onerror=null; this.src='https://via.placeholder.com/300x150?text=Image+Unavailable';"
                         />
+
                     </div>
 
                     <h4>
@@ -1732,14 +1775,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${
                             isConverted
                                 ? `
+
                                     <button
                                         class="try-on-btn try-btn"
                                         data-model="${modelUrl}"
                                     >
                                         Try On 3D
                                     </button>
+
                                 `
                                 : `
+
                                     <button
                                         class="try-on-btn"
                                         style="background:#cbd5e1; cursor:not-allowed;"
@@ -1752,13 +1798,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                                                 : '2D Only'
                                         }
                                     </button>
+
                                 `
                         }
 
                     </div>
                 `;
 
-                // View Details
+                // =================================================
+                // VIEW DETAILS
+                // =================================================
+
                 const viewButton =
                     card.querySelector(
                         '.view-btn'
@@ -1780,8 +1830,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     );
                 }
 
-                // Try On
-                if (isConverted) {
+                // =================================================
+                // TRY ON
+                // =================================================
+
+                if (
+                    isConverted
+                ) {
 
                     const tryButton =
                         card.querySelector(
@@ -1914,7 +1969,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
 
             console.error(
-                'Failed to load frames:',
+                'Failed to load frames from API:',
                 error
             );
 
@@ -1943,7 +1998,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         frameId
                     );
 
-                if (!numericFrameId) {
+                if (
+                    !numericFrameId
+                ) {
 
                     setStatus(
                         `❌ Invalid frame ID: ${frameId}`
@@ -1952,8 +2009,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
+                // -----------------------------------------
+                // MAKE SURE FRAMES ARE LOADED
+                // -----------------------------------------
+
                 if (
-                    !Array.isArray(allFrames) ||
+                    !Array.isArray(
+                        allFrames
+                    ) ||
                     allFrames.length === 0
                 ) {
 
@@ -1977,6 +2040,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
+                // -----------------------------------------
+                // FIND FRAME
+                // -----------------------------------------
+
                 const frame =
                     allFrames.find(
                         item =>
@@ -1999,6 +2066,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `✅ Frame found: ${frame.name}`
                 );
 
+                // -----------------------------------------
+                // CHECK MODEL
+                // -----------------------------------------
+
                 const modelUrl =
                     frame.model_3d_url;
 
@@ -2011,6 +2082,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
+                // -----------------------------------------
+                // CHECK CONVERSION
+                // -----------------------------------------
+
                 if (
                     frame.conversion_status !==
                     'Converted'
@@ -2022,6 +2097,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     return;
                 }
+
+                // -----------------------------------------
+                // CLEAN MODEL URL
+                // -----------------------------------------
 
                 const cleanApiBase =
                     apiBase.replace(
@@ -2039,6 +2118,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                             ''
                         )}`;
 
+                console.log(
+                    '🕶️ Mobile selected frame:',
+                    frame
+                );
+
+                console.log(
+                    '🥽 Loading model:',
+                    cleanModelUrl
+                );
+
                 flutterLog(
                     '🥽 LOADING MOBILE MODEL: ' +
                     cleanModelUrl
@@ -2048,6 +2137,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '🥽 Loading 3D model...'
                 );
 
+                // -----------------------------------------
+                // LOAD MODEL
+                // -----------------------------------------
+
                 loadGLTFModel(
                     cleanModelUrl
                 );
@@ -2055,7 +2148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (error) {
 
                 console.error(
-                    'Mobile Try-On failed:',
+                    '❌ Mobile Try-On failed:',
                     error
                 );
 
@@ -2146,7 +2239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadFramesFromAPI();
 
     // =====================================================
-    // FACE-API INITIALIZATION
+    // FACE DETECTION INITIALIZATION
     // =====================================================
 
     async function initFaceDetection() {
@@ -2164,8 +2257,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
 
-            // Only models required for
-            // face detection + landmarks.
+            // IMPORTANT:
+            // Only load models actually needed
+            // for Try-On.
+            //
+            // Removed:
+            // - faceRecognitionNet
+            // - ageGenderNet
+
             await Promise.all([
 
                 faceapi.nets
@@ -2179,8 +2278,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .loadFromUri(
                         './models'
                     )
-
             ]);
+
+            console.log(
+                '✅ Face detection models loaded'
+            );
 
             flutterLog(
                 '✅ FACE DETECTION MODELS LOADED'
@@ -2192,43 +2294,48 @@ document.addEventListener('DOMContentLoaded', async () => {
                     'Ready — click a frame to try it on!';
             }
 
-        } catch (error) {
+        } catch (err) {
 
             console.error(
-                'Face model loading error:',
-                error
+                'Failed to load face-api models:',
+                err
             );
 
             flutterLog(
                 '❌ FACE MODEL LOAD ERROR: ' +
                 (
-                    error.message ||
-                    error
+                    err.message ||
+                    err
                 )
             );
 
             if (status) {
 
                 status.textContent =
-                    '❌ Failed to load face detection models.';
+                    'Failed to load face detection models.';
             }
         }
     }
 
     // =====================================================
-    // INITIALIZE FACE API
+    // INITIALIZE FACE DETECTION
     // =====================================================
 
     await initFaceDetection();
 
     // =====================================================
-    // MOBILE WEBVIEW STARTUP
+    // MOBILE WEBVIEW TRY-ON
     // =====================================================
 
     if (
         mobileTryOn &&
         targetFrameId
     ) {
+
+        console.log(
+            '📱 MOBILE TRY-ON MODE:',
+            targetFrameId
+        );
 
         flutterLog(
             '📱 MOBILE TRY-ON MODE: ' +
@@ -2239,25 +2346,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             'mobile-try-on-mode'
         );
 
+        console.log(
+            '📱 Calling openTryOnModal:',
+            targetFrameId
+        );
+
         window.openTryOnModal(
             targetFrameId
         );
     }
 
     // =====================================================
-    // CLEANUP
+    // CLEANUP & MODAL CLOSING
     // =====================================================
 
     function closeVirtualTryOn() {
 
-        // Stop detection/camera
-        stopCamera();
-
-        // Remove video plane
-        removeVideoPlane();
-
-        // Remove model
-        removeCurrentModel();
+        // -----------------------------------------
+        // HIDE MODAL
+        // -----------------------------------------
 
         if (vtoModal) {
 
@@ -2265,30 +2372,67 @@ document.addEventListener('DOMContentLoaded', async () => {
                 'none';
         }
 
-        // Remove hidden video element
-        const hiddenVideos =
-            document.querySelectorAll(
+        // -----------------------------------------
+        // STOP CAMERA + DETECTION
+        // -----------------------------------------
+
+        stopCamera();
+
+        // -----------------------------------------
+        // REMOVE VIDEO PLANE
+        // -----------------------------------------
+
+        removeVideoPlane();
+
+        // -----------------------------------------
+        // REMOVE MODEL
+        // -----------------------------------------
+
+        removeCurrentModel();
+
+        // -----------------------------------------
+        // EXTRA VIDEO CLEANUP
+        // -----------------------------------------
+
+        document
+            .querySelectorAll(
                 'video'
-            );
+            )
+            .forEach(
+                video => {
 
-        hiddenVideos.forEach(
-            video => {
-
-                if (
-                    !video.srcObject
-                ) {
                     try {
+
+                        if (
+                            video.srcObject
+                        ) {
+
+                            video.srcObject
+                                .getTracks()
+                                .forEach(
+                                    track =>
+                                        track.stop()
+                                );
+
+                            video.srcObject =
+                                null;
+                        }
+
                         video.remove();
+
                     } catch (error) {
-                        // Ignore
+
+                        console.warn(
+                            'Video cleanup error:',
+                            error
+                        );
                     }
                 }
-            }
-        );
+            );
     }
 
     // =====================================================
-    // CLOSE VTO
+    // CLOSE VTO BUTTON
     // =====================================================
 
     const closeVTOBtn =
@@ -2306,7 +2450,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =====================================================
-    // CLOSE PREVIEW
+    // CLOSE PREVIEW BUTTON
     // =====================================================
 
     const closePreviewBtn =
