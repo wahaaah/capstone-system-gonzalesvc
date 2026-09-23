@@ -518,7 +518,7 @@ body.mobile-try-on-mode #faceFilterModal #modal-container {
   <script defer src="./face-api.min.js"></script>
   <script defer src="./scripts.js" type="module"></script>
 
- <!-- MOBILE WEBVIEW QUERY PARAM LISTENER -->
+<!-- MOBILE WEBVIEW QUERY PARAM LISTENER -->
 <script>
   window.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -527,24 +527,43 @@ body.mobile-try-on-mode #faceFilterModal #modal-container {
     const mobileTryOn =
       urlParams.get('mobileTryOn') === 'true';
 
-    if (mobileTryOn && targetFrameId) {
-
-      // Hide the normal website and show only Try-On
-      document.body.classList.add('mobile-try-on-mode');
-
-      const checkExist = setInterval(() => {
-        if (typeof window.openTryOnModal === 'function') {
-          clearInterval(checkExist);
-
-          console.log(
-            '📱 Opening mobile Try-On for frame:',
-            targetFrameId
-          );
-
-          window.openTryOnModal(targetFrameId);
-        }
-      }, 500);
+    if (!mobileTryOn || !targetFrameId) {
+      return;
     }
+
+    console.log(
+      '📱 MOBILE TRY-ON MODE:',
+      targetFrameId
+    );
+
+    document.body.classList.add('mobile-try-on-mode');
+
+    const checkExist = setInterval(() => {
+
+      if (typeof window.openTryOnModal === 'function') {
+
+        clearInterval(checkExist);
+
+        console.log(
+          '📱 Calling openTryOnModal:',
+          targetFrameId
+        );
+
+        window.openTryOnModal(targetFrameId);
+      }
+
+    }, 500);
+
+    // Prevent an infinite loop if something goes wrong
+    setTimeout(() => {
+      clearInterval(checkExist);
+
+      if (typeof window.openTryOnModal !== 'function') {
+        console.error(
+          '❌ openTryOnModal was never initialized.'
+        );
+      }
+    }, 30000);
   });
 </script>
 </body>
