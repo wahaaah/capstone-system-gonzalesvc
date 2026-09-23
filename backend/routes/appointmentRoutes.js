@@ -147,4 +147,39 @@ router.patch('/:id', async (req, res) => {
     }
 });
 
+// 5. GET: Fetch appointments for one patient
+router.get('/patient/:patient_id', async (req, res) => {
+    const { patient_id } = req.params;
+
+    try {
+        const [rows] = await db.query(`
+            SELECT 
+                a.appointment_id,
+                a.patient_id,
+                p.name AS patient_name,
+                CAST(a.appointment_date AS CHAR) AS appointment_date,
+                CAST(a.appointment_time AS CHAR) AS appointment_time,
+                a.purpose_of_visit,
+                a.appointment_status
+            FROM appointments a
+            LEFT JOIN patients p 
+                ON a.patient_id = p.patient_id
+            WHERE a.patient_id = ?
+            ORDER BY a.appointment_date ASC, a.appointment_time ASC
+        `, [patient_id]);
+
+        res.json(rows);
+
+    } catch (error) {
+        console.error(
+            '❌ MARIADB GET PATIENT APPOINTMENTS ERROR:',
+            error.message
+        );
+
+        res.status(500).json({
+            error: 'Failed to fetch patient appointments.'
+        });
+    }
+});
+
 module.exports = router;
