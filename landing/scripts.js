@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
 
-    // ── STATE VARIABLES ──
+    // =====================================================
+    // STATE VARIABLES
+    // =====================================================
 
     const apiBase =
         document.body.dataset.api ||
@@ -10,7 +12,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     let searchQuery = '';
     let selectedCategory = 'All';
 
-    // ── THREE.JS & VTO SETUP ──
+    // =====================================================
+    // THREE.JS & VTO SETUP
+    // =====================================================
 
     var scene = new THREE.Scene();
 
@@ -36,10 +40,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('previewModal');
 
     var model;
+
     var rendererAttached = false;
+
     var currentStream = null;
 
     camera.position.set(0, 0, 10);
+
     camera.lookAt(0, 0, 0);
 
     var ambientLight =
@@ -56,11 +63,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     scene.add(directionalLight);
 
-    const loader = new THREE.GLTFLoader();
+    const loader =
+        new THREE.GLTFLoader();
 
-    // ── RENDERER ──
+    // =====================================================
+    // RENDERER
+    // =====================================================
 
     function attachRenderer() {
+
         if (rendererAttached) return;
 
         var w =
@@ -70,27 +81,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             modalContainer.clientHeight || 480;
 
         renderer.setSize(w, h);
-        renderer.setPixelRatio(window.devicePixelRatio);
+
+        renderer.setPixelRatio(
+            window.devicePixelRatio
+        );
 
         modalContainer.appendChild(
             renderer.domElement
         );
 
         camera.aspect = w / h;
+
         camera.updateProjectionMatrix();
 
         rendererAttached = true;
     }
 
     function onWindowResize() {
+
         if (!rendererAttached) return;
 
-        var w = modalContainer.clientWidth;
-        var h = modalContainer.clientHeight;
+        var w =
+            modalContainer.clientWidth;
+
+        var h =
+            modalContainer.clientHeight;
 
         if (!w || !h) return;
 
         camera.aspect = w / h;
+
         camera.updateProjectionMatrix();
 
         renderer.setSize(w, h);
@@ -101,9 +121,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         onWindowResize
     );
 
-    // ── ANIMATION ──
+    // =====================================================
+    // ANIMATION
+    // =====================================================
 
     function animate() {
+
         requestAnimationFrame(animate);
 
         renderer.render(
@@ -112,9 +135,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         );
     }
 
-    // ── LOAD 3D MODEL ──
+    // =====================================================
+    // LOAD 3D MODEL
+    // =====================================================
 
     function loadGLTFModel(filePath) {
+
+        console.log(
+            '🥽 STARTING GLTF LOAD:',
+            filePath
+        );
+
+        if (window.FlutterLog) {
+            FlutterLog.postMessage(
+                '🥽 STARTING GLTF LOAD: ' +
+                filePath
+            );
+        }
 
         if (vtoModal) {
             vtoModal.style.display = 'flex';
@@ -123,14 +160,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         attachRenderer();
 
         loader.load(
+
             filePath,
 
             function (gltf) {
 
+                // -----------------------------------------
+                // MODEL SUCCESSFULLY LOADED
+                // -----------------------------------------
+
+                console.log(
+                    '🕶️ FRAME MODEL LOADED'
+                );
+
+                if (window.FlutterLog) {
+                    FlutterLog.postMessage(
+                        '🕶️ FRAME MODEL LOADED'
+                    );
+                }
+
+                // -----------------------------------------
+                // REMOVE PREVIOUS MODEL
+                // -----------------------------------------
+
                 if (model) {
+
                     scene.remove(model);
+
                     model = null;
                 }
+
+                // -----------------------------------------
+                // SET NEW MODEL
+                // -----------------------------------------
 
                 model = gltf.scene;
 
@@ -140,7 +202,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     0.1
                 );
 
-                model.rotation.y = Math.PI;
+                model.rotation.y =
+                    Math.PI;
 
                 model.position.set(
                     -5,
@@ -150,7 +213,55 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 scene.add(model);
 
+                console.log(
+                    '🕶️ MODEL ADDED TO THREE.JS SCENE'
+                );
+
+                if (window.FlutterLog) {
+                    FlutterLog.postMessage(
+                        '🕶️ MODEL ADDED TO THREE.JS SCENE'
+                    );
+                }
+
+                console.log(
+                    '🕶️ INITIAL MODEL POSITION:',
+                    model.position.x,
+                    model.position.y,
+                    model.position.z
+                );
+
+                console.log(
+                    '🕶️ INITIAL MODEL SCALE:',
+                    model.scale.x,
+                    model.scale.y,
+                    model.scale.z
+                );
+
+                if (window.FlutterLog) {
+                    FlutterLog.postMessage(
+                        `🕶️ INITIAL MODEL POSITION: ` +
+                        `${model.position.x}, ` +
+                        `${model.position.y}, ` +
+                        `${model.position.z}`
+                    );
+
+                    FlutterLog.postMessage(
+                        `🕶️ INITIAL MODEL SCALE: ` +
+                        `${model.scale.x}, ` +
+                        `${model.scale.y}, ` +
+                        `${model.scale.z}`
+                    );
+                }
+
+                // -----------------------------------------
+                // START THREE.JS RENDERING
+                // -----------------------------------------
+
                 animate();
+
+                // -----------------------------------------
+                // START CAMERA + FACE TRACKING
+                // -----------------------------------------
 
                 run();
             },
@@ -158,10 +269,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             undefined,
 
             function (err) {
+
                 console.error(
-                    'Error loading GLTF model:',
+                    '❌ Error loading GLTF model:',
                     err
                 );
+
+                if (window.FlutterLog) {
+                    FlutterLog.postMessage(
+                        '❌ GLTF LOAD ERROR: ' +
+                        (err.message || err)
+                    );
+                }
 
                 const status =
                     document.getElementById(
@@ -169,6 +288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     );
 
                 if (status) {
+
                     status.textContent =
                         '❌ Failed to load 3D model.';
                 }
@@ -176,7 +296,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         );
     }
 
-    // ── SCREEN TO WORLD ──
+    // =====================================================
+    // SCREEN TO WORLD
+    // =====================================================
 
     function screenToWorldCoordinates(
         screenPoint,
@@ -218,9 +340,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             );
     }
 
-    // =========================================================
+    // =====================================================
     // CAMERA + VIDEO + FACE TRACKING
-    // =========================================================
+    // =====================================================
 
     async function run() {
 
@@ -230,9 +352,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 '📷 Starting camera...'
             );
 
-            // =====================================================
+            // =================================================
             // GET CAMERA STREAM
-            // =====================================================
+            // =================================================
 
             const stream =
                 await navigator.mediaDevices.getUserMedia({
@@ -254,9 +376,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 stream.getVideoTracks()
             );
 
-            // =====================================================
+            if (window.FlutterLog) {
+                FlutterLog.postMessage(
+                    '📷 CAMERA STREAM OBTAINED'
+                );
+            }
+
+            // =================================================
             // CREATE VIDEO ELEMENT
-            // =====================================================
+            // =================================================
 
             const video =
                 document.createElement('video');
@@ -264,10 +392,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             video.srcObject = stream;
 
             video.autoplay = true;
+
             video.muted = true;
+
             video.playsInline = true;
 
             // Android WebView compatibility
+
             video.setAttribute(
                 'autoplay',
                 ''
@@ -288,15 +419,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ''
             );
 
-            // =====================================================
+            // =================================================
             // MOBILE WEBVIEW
-            // =====================================================
+            // =================================================
 
             if (mobileTryOn) {
 
                 console.log(
                     '📱 Mobile WebView video configured'
                 );
+
+                if (window.FlutterLog) {
+                    FlutterLog.postMessage(
+                        '📱 MOBILE WEBVIEW VIDEO CONFIGURED'
+                    );
+                }
 
                 try {
 
@@ -309,12 +446,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                         video.videoHeight
                     );
 
+                    if (window.FlutterLog) {
+                        FlutterLog.postMessage(
+                            `✅ MOBILE CAMERA VIDEO PLAYING: ` +
+                            `${video.videoWidth}x${video.videoHeight}`
+                        );
+                    }
+
                 } catch (playError) {
 
                     console.error(
                         '❌ Mobile video.play() failed:',
                         playError
                     );
+
+                    if (window.FlutterLog) {
+                        FlutterLog.postMessage(
+                            '❌ MOBILE VIDEO PLAY FAILED: ' +
+                            (playError.message || playError)
+                        );
+                    }
                 }
 
             } else {
@@ -331,13 +482,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                             '❌ Video play failed:',
                             error
                         );
-
                     });
             }
 
-            // =====================================================
+            // =================================================
             // CREATE VIDEO TEXTURE
-            // =====================================================
+            // =================================================
 
             const videoTexture =
                 new THREE.VideoTexture(video);
@@ -351,9 +501,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             videoTexture.format =
                 THREE.RGBAFormat;
 
-            // =====================================================
+            // =================================================
             // CAMERA BACKGROUND PLANE
-            // =====================================================
+            // =================================================
 
             const geometry =
                 new THREE.PlaneGeometry(
@@ -374,6 +524,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 );
 
             // Put camera behind the glasses
+
             plane.position.set(
                 0,
                 0,
@@ -386,9 +537,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 '🎥 Camera plane added to Three.js scene'
             );
 
-            // =====================================================
+            if (window.FlutterLog) {
+                FlutterLog.postMessage(
+                    '🎥 CAMERA PLANE ADDED'
+                );
+            }
+
+            // =================================================
             // VIDEO PLAYING EVENT
-            // =====================================================
+            // =================================================
 
             video.addEventListener(
                 'playing',
@@ -401,236 +558,329 @@ document.addEventListener('DOMContentLoaded', async () => {
                         video.videoHeight
                     );
 
+                    if (window.FlutterLog) {
+                        FlutterLog.postMessage(
+                            `🎥 VIDEO PLAYING: ` +
+                            `${video.videoWidth}x${video.videoHeight}`
+                        );
+                    }
                 }
             );
 
+            // =====================================================
+            // FACE DETECTION
+            // =====================================================
 
-// =====================================================
-// FACE DETECTION
-// =====================================================
+            video.addEventListener(
+                'playing',
+                async () => {
 
-video.addEventListener(
-    'playing',
-    async () => {
+                    const displaySize = {
+                        width:
+                            video.videoWidth,
 
-        const displaySize = {
-            width: video.videoWidth,
-            height: video.videoHeight
-        };
-
-        console.log(
-            '🙂 Face detection started:',
-            displaySize
-        );
-
-        // ---------------------------------------------
-        // STATUS DISPLAY
-        // ---------------------------------------------
-
-        const status =
-            document.getElementById('vto-status');
-
-        if (status) {
-            status.textContent =
-                '🔍 Looking for your face...';
-        }
-
-        // ---------------------------------------------
-        // FACE DETECTION LOOP
-        // ---------------------------------------------
-
-        setInterval(
-            async () => {
-
-                if (!model) return;
-
-                try {
-const detections =
-    await faceapi
-        .detectAllFaces(
-            video,
-            new faceapi.SsdMobilenetv1Options({
-                minConfidence: 0.5
-            })
-        )
-        .withFaceLandmarks();
-
-                    // ---------------------------------
-                    // NO FACE
-                    // ---------------------------------
-
-                    if (detections.length === 0) {
-
-                        console.log(
-                            '🔴 NO FACE DETECTED'
-                        );
-
-                        if (status) {
-                            status.textContent =
-                                '🔴 No face detected';
-                        }
-
-                        return;
-                    }
-
-                    // ---------------------------------
-                    // FACE FOUND
-                    // ---------------------------------
-
-                    console.log(
-                        '🟢 FACE DETECTED:',
-                        detections[0].detection.score
-                    );
-
-                    if (status) {
-                        status.textContent =
-                            `🟢 Face detected`;
-                    }
-
-                    const detection =
-                        detections[0];
-
-                    const leftEye =
-                        detection
-                            .landmarks
-                            .getLeftEye();
-
-                    const rightEye =
-                        detection
-                            .landmarks
-                            .getRightEye();
-
-                    // =================================
-                    // FACE CENTER
-                    // =================================
-
-                    const centerX =
-                        (
-                            leftEye[0].x +
-                            rightEye[0].x
-                        ) / 2;
-
-                    const centerY =
-                        (
-                            leftEye[0].y +
-                            rightEye[0].y
-                        ) / 2;
-
-                    const worldCenterPoint =
-                        screenToWorldCoordinates(
-                            {
-                                x: centerX,
-                                y: centerY
-                            },
-                            displaySize
-                        );
-
-                    // =================================
-                    // FRAME POSITION
-                    // =================================
-
-                    const eyeToEyebrowOffset = 1;
-
-                    const adjustedWorldCenterPoint = {
-                        x: worldCenterPoint.x,
-
-                        y:
-                            worldCenterPoint.y -
-                            eyeToEyebrowOffset,
-
-                        z: worldCenterPoint.z
+                        height:
+                            video.videoHeight
                     };
 
-                    if (
-                        !isNaN(
-                            adjustedWorldCenterPoint.x
-                        )
-                    ) {
-
-                        model.position.copy(
-                            adjustedWorldCenterPoint
-                        );
-                    }
-
-                    // =================================
-                    // FRAME ROTATION
-                    // =================================
-
-                    const deltaY =
-                        rightEye[0].y -
-                        leftEye[0].y;
-
-                    const deltaX =
-                        rightEye[0].x -
-                        leftEye[0].x;
-
-                    const angle =
-                        Math.atan2(
-                            deltaY,
-                            deltaX
-                        );
-
-                    model.rotation.z =
-                        angle;
-
-                    // =================================
-                    // FRAME SCALE
-                    // =================================
-
-                    const distanceBetweenEyes =
-                        Math.sqrt(
-                            Math.pow(
-                                rightEye[0].x -
-                                leftEye[0].x,
-                                2
-                            ) +
-                            Math.pow(
-                                rightEye[0].y -
-                                leftEye[0].y,
-                                2
-                            )
-                        );
-
-                    const scaleFactor =
-                        distanceBetweenEyes /
-                        200;
-
-                    if (
-                        !isNaN(scaleFactor) &&
-                        scaleFactor > 0
-                    ) {
-
-                        model.scale.set(
-                            scaleFactor,
-                            scaleFactor,
-                            scaleFactor
-                        );
-                    }
-
-                } catch (faceError) {
-
-                    console.error(
-                        '❌ Face detection error:',
-                        faceError
+                    console.log(
+                        '🙂 Face detection started:',
+                        displaySize
                     );
 
-                    if (status) {
-                        status.textContent =
-                            '❌ Face detection error';
+                    if (window.FlutterLog) {
+                        FlutterLog.postMessage(
+                            `🙂 FACE DETECTION STARTED: ` +
+                            `${displaySize.width}x${displaySize.height}`
+                        );
                     }
-                }
 
-            },
-            100
-        );
-    }
-);
+                    // ---------------------------------------------
+                    // STATUS DISPLAY
+                    // ---------------------------------------------
+
+                    const status =
+                        document.getElementById(
+                            'vto-status'
+                        );
+
+                    if (status) {
+
+                        status.textContent =
+                            '🔍 Looking for your face...';
+                    }
+
+                    // ---------------------------------------------
+                    // FACE DETECTION LOOP
+                    // ---------------------------------------------
+
+                    setInterval(
+                        async () => {
+
+                            if (!model) return;
+
+                            try {
+
+                                const detections =
+                                    await faceapi
+                                        .detectAllFaces(
+                                            video,
+                                            new faceapi.SsdMobilenetv1Options({
+                                                minConfidence: 0.5
+                                            })
+                                        )
+                                        .withFaceLandmarks();
+
+                                // ---------------------------------
+                                // NO FACE
+                                // ---------------------------------
+
+                                if (
+                                    detections.length === 0
+                                ) {
+
+                                    console.log(
+                                        '🔴 NO FACE DETECTED'
+                                    );
+
+                                    if (window.FlutterLog) {
+                                        FlutterLog.postMessage(
+                                            '🔴 NO FACE DETECTED'
+                                        );
+                                    }
+
+                                    if (status) {
+
+                                        status.textContent =
+                                            '🔴 No face detected';
+                                    }
+
+                                    return;
+                                }
+
+                                // ---------------------------------
+                                // FACE FOUND
+                                // ---------------------------------
+
+                                const detection =
+                                    detections[0];
+
+                                console.log(
+                                    '🟢 FACE DETECTED:',
+                                    detection.detection.score
+                                );
+
+                                if (window.FlutterLog) {
+                                    FlutterLog.postMessage(
+                                        '🟢 FACE DETECTED: ' +
+                                        detection.detection.score
+                                    );
+                                }
+
+                                if (status) {
+
+                                    status.textContent =
+                                        '🟢 Face detected';
+                                }
+
+                                // =================================
+                                // GET EYES
+                                // =================================
+
+                                const leftEye =
+                                    detection
+                                        .landmarks
+                                        .getLeftEye();
+
+                                const rightEye =
+                                    detection
+                                        .landmarks
+                                        .getRightEye();
+
+                                // =================================
+                                // FACE CENTER
+                                // =================================
+
+                                const centerX =
+                                    (
+                                        leftEye[0].x +
+                                        rightEye[0].x
+                                    ) / 2;
+
+                                const centerY =
+                                    (
+                                        leftEye[0].y +
+                                        rightEye[0].y
+                                    ) / 2;
+
+                                const worldCenterPoint =
+                                    screenToWorldCoordinates(
+                                        {
+                                            x: centerX,
+                                            y: centerY
+                                        },
+                                        displaySize
+                                    );
+
+                                // =================================
+                                // FRAME POSITION
+                                // =================================
+
+                                const eyeToEyebrowOffset =
+                                    1;
+
+                                const adjustedWorldCenterPoint = {
+                                    x:
+                                        worldCenterPoint.x,
+
+                                    y:
+                                        worldCenterPoint.y -
+                                        eyeToEyebrowOffset,
+
+                                    z:
+                                        worldCenterPoint.z
+                                };
+
+                                if (
+                                    !isNaN(
+                                        adjustedWorldCenterPoint.x
+                                    )
+                                ) {
+
+                                    model.position.copy(
+                                        adjustedWorldCenterPoint
+                                    );
+
+                                    console.log(
+                                        '🕶️ FRAME POSITION:',
+                                        model.position.x,
+                                        model.position.y,
+                                        model.position.z
+                                    );
+
+                                    if (window.FlutterLog) {
+                                        FlutterLog.postMessage(
+                                            `🕶️ FRAME POSITION: ` +
+                                            `${model.position.x}, ` +
+                                            `${model.position.y}, ` +
+                                            `${model.position.z}`
+                                        );
+                                    }
+                                }
+
+                                // =================================
+                                // FRAME ROTATION
+                                // =================================
+
+                                const deltaY =
+                                    rightEye[0].y -
+                                    leftEye[0].y;
+
+                                const deltaX =
+                                    rightEye[0].x -
+                                    leftEye[0].x;
+
+                                const angle =
+                                    Math.atan2(
+                                        deltaY,
+                                        deltaX
+                                    );
+
+                                model.rotation.z =
+                                    angle;
+
+                                // =================================
+                                // FRAME SCALE
+                                // =================================
+
+                                const distanceBetweenEyes =
+                                    Math.sqrt(
+                                        Math.pow(
+                                            rightEye[0].x -
+                                            leftEye[0].x,
+                                            2
+                                        ) +
+                                        Math.pow(
+                                            rightEye[0].y -
+                                            leftEye[0].y,
+                                            2
+                                        )
+                                    );
+
+                                const scaleFactor =
+                                    distanceBetweenEyes /
+                                    200;
+
+                                if (
+                                    !isNaN(scaleFactor) &&
+                                    scaleFactor > 0
+                                ) {
+
+                                    model.scale.set(
+                                        scaleFactor,
+                                        scaleFactor,
+                                        scaleFactor
+                                    );
+
+                                    console.log(
+                                        '🕶️ FRAME SCALE:',
+                                        scaleFactor
+                                    );
+
+                                    if (window.FlutterLog) {
+                                        FlutterLog.postMessage(
+                                            `🕶️ FRAME SCALE: ` +
+                                            `${scaleFactor}`
+                                        );
+                                    }
+                                }
+
+                            } catch (faceError) {
+
+                                console.error(
+                                    '❌ Face detection error:',
+                                    faceError
+                                );
+
+                                if (window.FlutterLog) {
+                                    FlutterLog.postMessage(
+                                        '❌ FACE DETECTION ERROR: ' +
+                                        (
+                                            faceError.message ||
+                                            faceError
+                                        )
+                                    );
+                                }
+
+                                if (status) {
+
+                                    status.textContent =
+                                        '❌ Face detection error';
+                                }
+                            }
+
+                        },
+                        100
+                    );
+                }
+            );
+
         } catch (err) {
 
             console.error(
                 '❌ Unable to access the camera:',
                 err
             );
+
+            if (window.FlutterLog) {
+                FlutterLog.postMessage(
+                    '❌ CAMERA ERROR: ' +
+                    (
+                        err.message ||
+                        err
+                    )
+                );
+            }
 
             const status =
                 document.getElementById(
@@ -738,6 +988,7 @@ const detections =
     function closePreviewModal() {
 
         if (previewModal) {
+
             previewModal.style.display =
                 'none';
         }
@@ -874,7 +1125,6 @@ const detections =
 
                         ${
                             isConverted
-
                                 ? `
                                     <button
                                         class="try-on-btn try-btn"
@@ -883,7 +1133,6 @@ const detections =
                                         Try On 3D
                                     </button>
                                 `
-
                                 : `
                                     <button
                                         class="try-on-btn"
@@ -1058,6 +1307,7 @@ const detections =
                 );
 
             if (!resp.ok) {
+
                 throw new Error(
                     `HTTP Error ${resp.status}`
                 );
@@ -1104,8 +1354,16 @@ const detections =
                 );
 
                 if (status) {
+
                     status.textContent =
                         message;
+                }
+
+                if (window.FlutterLog) {
+
+                    FlutterLog.postMessage(
+                        message
+                    );
                 }
             }
 
@@ -1127,7 +1385,10 @@ const detections =
                     return;
                 }
 
-                // Make sure frames are loaded
+                // -----------------------------------------
+                // MAKE SURE FRAMES ARE LOADED
+                // -----------------------------------------
+
                 if (
                     !Array.isArray(
                         allFrames
@@ -1160,6 +1421,10 @@ const detections =
                     return;
                 }
 
+                // -----------------------------------------
+                // FIND FRAME
+                // -----------------------------------------
+
                 const frame =
                     allFrames.find(
                         item =>
@@ -1187,6 +1452,10 @@ const detections =
                     `✅ Frame found: ${frame.name}`
                 );
 
+                // -----------------------------------------
+                // CHECK MODEL URL
+                // -----------------------------------------
+
                 const modelUrl =
                     frame.model_3d_url;
 
@@ -1199,6 +1468,10 @@ const detections =
                     return;
                 }
 
+                // -----------------------------------------
+                // CHECK CONVERSION
+                // -----------------------------------------
+
                 if (
                     frame.conversion_status !==
                     'Converted'
@@ -1210,6 +1483,10 @@ const detections =
 
                     return;
                 }
+
+                // -----------------------------------------
+                // CLEAN MODEL URL
+                // -----------------------------------------
 
                 const cleanModelUrl =
                     modelUrl.startsWith(
@@ -1231,9 +1508,21 @@ const detections =
                     cleanModelUrl
                 );
 
+                if (window.FlutterLog) {
+
+                    FlutterLog.postMessage(
+                        '🥽 LOADING MOBILE MODEL: ' +
+                        cleanModelUrl
+                    );
+                }
+
                 setStatus(
                     '🥽 Loading 3D model...'
                 );
+
+                // -----------------------------------------
+                // LOAD MODEL
+                // -----------------------------------------
 
                 loadGLTFModel(
                     cleanModelUrl
@@ -1342,6 +1631,7 @@ const detections =
             );
 
         if (status) {
+
             status.textContent =
                 'Loading face detection models…';
         }
@@ -1349,6 +1639,7 @@ const detections =
         try {
 
             await Promise.all([
+
                 faceapi.nets
                     .ssdMobilenetv1
                     .loadFromUri(
@@ -1372,7 +1663,19 @@ const detections =
                     .loadFromUri(
                         './models'
                     )
+
             ]);
+
+            console.log(
+                '✅ Face detection models loaded'
+            );
+
+            if (window.FlutterLog) {
+
+                FlutterLog.postMessage(
+                    '✅ FACE DETECTION MODELS LOADED'
+                );
+            }
 
             if (status) {
 
@@ -1387,6 +1690,17 @@ const detections =
                 err
             );
 
+            if (window.FlutterLog) {
+
+                FlutterLog.postMessage(
+                    '❌ FACE MODEL LOAD ERROR: ' +
+                    (
+                        err.message ||
+                        err
+                    )
+                );
+            }
+
             if (status) {
 
                 status.textContent =
@@ -1394,6 +1708,10 @@ const detections =
             }
         }
     }
+
+    // =========================================================
+    // INITIALIZE FACE DETECTION
+    // =========================================================
 
     await initFaceDetection();
 
@@ -1426,6 +1744,14 @@ const detections =
             targetFrameId
         );
 
+        if (window.FlutterLog) {
+
+            FlutterLog.postMessage(
+                '📱 MOBILE TRY-ON MODE: ' +
+                targetFrameId
+            );
+        }
+
         document.body.classList.add(
             'mobile-try-on-mode'
         );
@@ -1447,11 +1773,15 @@ const detections =
     function closeVirtualTryOn() {
 
         if (vtoModal) {
+
             vtoModal.style.display =
                 'none';
         }
 
-        // Stop camera
+        // -----------------------------------------
+        // STOP CAMERA
+        // -----------------------------------------
+
         if (currentStream) {
 
             currentStream
@@ -1464,7 +1794,10 @@ const detections =
             currentStream = null;
         }
 
-        // Remove model
+        // -----------------------------------------
+        // REMOVE MODEL
+        // -----------------------------------------
+
         if (model) {
 
             scene.remove(
@@ -1474,7 +1807,10 @@ const detections =
             model = null;
         }
 
-        // Remove camera video plane
+        // -----------------------------------------
+        // REMOVE CAMERA VIDEO PLANE
+        // -----------------------------------------
+
         const videoMesh =
             scene.children.find(
                 child =>
@@ -1556,4 +1892,5 @@ const detections =
                 closePreviewModal();
             }
         };
+
 });
