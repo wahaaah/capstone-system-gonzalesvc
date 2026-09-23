@@ -289,8 +289,13 @@
     .preview-info p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 1.25rem; }
     
     /* ── MOBILE TRY-ON MODE ── */
-body.mobile-try-on-mode > *:not(#faceFilterModal) {
-    display: none !important;
+body.mobile-try-on-mode #faceFilterModal {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  z-index: 9999;
 }
 
 body.mobile-try-on-mode {
