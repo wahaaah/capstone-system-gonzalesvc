@@ -305,6 +305,74 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // ── MOBILE WEBVIEW TRY-ON BRIDGE ──
+
+window.openTryOnModal = async function (frameId) {
+    try {
+        console.log('📱 Mobile WebView requested frame:', frameId);
+
+        const numericFrameId = Number(frameId);
+
+        if (!numericFrameId) {
+            console.error('Invalid frameId:', frameId);
+            return;
+        }
+
+        // Make sure frames have been loaded.
+        if (!allFrames || allFrames.length === 0) {
+            console.log('⏳ Waiting for frame data...');
+
+            await loadFramesFromAPI();
+        }
+
+        const frame = allFrames.find(
+            item => Number(item.frame_id) === numericFrameId
+        );
+
+        if (!frame) {
+            console.error(
+                '❌ Frame not found:',
+                numericFrameId
+            );
+            return;
+        }
+
+        console.log('🕶️ Mobile selected frame:', frame);
+
+        const modelUrl = frame.model_3d_url;
+
+        const isConverted =
+            frame.conversion_status === 'Converted' &&
+            modelUrl;
+
+        if (!isConverted) {
+            console.error(
+                '❌ This frame does not have a usable 3D model:',
+                frame
+            );
+            return;
+        }
+
+        const cleanModelUrl =
+            modelUrl.startsWith('http')
+                ? modelUrl
+                : `${apiBase}/${modelUrl.replace(/^\/+/, '')}`;
+
+        console.log(
+            '🥽 Loading mobile Try-On model:',
+            cleanModelUrl
+        );
+
+        loadGLTFModel(cleanModelUrl);
+
+    } catch (error) {
+        console.error(
+            '❌ Mobile Try-On failed:',
+            error
+        );
+    }
+};
+
     // ── SEARCH & CATEGORY EVENT LISTENERS ──
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
