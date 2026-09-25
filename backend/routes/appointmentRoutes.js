@@ -294,20 +294,23 @@ router.get('/patient/:patient_id', async (req, res) => {
 // 6. POST: Check for upcoming appointment reminders
 router.post('/reminders/check', async (req, res) => {
     try {
-        const [appointments] = await db.query(`
-            SELECT
-                a.appointment_id,
-                a.patient_id,
-                a.appointment_date,
-                a.appointment_time,
-                a.appointment_status
-            FROM appointments a
-            WHERE
-                LOWER(a.appointment_status) = 'approved'
-                AND TIMESTAMP(a.appointment_date, a.appointment_time)
-                    BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 24 HOUR)
-        `);
-
+       const [appointments] = await db.query(`
+    SELECT
+        a.appointment_id,
+        a.patient_id,
+        a.appointment_date,
+        a.appointment_time,
+        a.appointment_status
+    FROM appointments a
+    WHERE
+        LOWER(a.appointment_status) = 'approved'
+        AND TIMESTAMP(a.appointment_date, a.appointment_time)
+            BETWEEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 8 HOUR)
+            AND DATE_ADD(
+                DATE_ADD(UTC_TIMESTAMP(), INTERVAL 8 HOUR),
+                INTERVAL 24 HOUR
+            )
+`);
         let created = 0;
 
         for (const appointment of appointments) {
