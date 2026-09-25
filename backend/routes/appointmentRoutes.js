@@ -191,6 +191,7 @@ router.patch('/:id', async (req, res) => {
             switch (newStatus.toLowerCase()) {
 
                 case 'approved':
+                case 'confirmed':
                     type = 'appointment_approved';
                     title = 'Appointment Approved';
                     body =
