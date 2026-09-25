@@ -123,27 +123,136 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// 4. PATCH: Quick status-only update (e.g. cancel) — matches appointmentService.updateStatus on the frontend
+// 4. PATCH: Quick status-only update
 router.patch('/:id', async (req, res) => {
     const { id } = req.params;
     const { appointment_status } = req.body;
 
     if (!appointment_status) {
-        return res.status(400).json({ error: 'appointment_status is required.' });
+        return res.status(400).json({
+            error: 'appointment_status is required.'
+        });
     }
 
     try {
-        const [result] = await db.query(
-            'UPDATE appointments SET appointment_status = ? WHERE appointment_id = ?',
-            [appointment_status, id]
+        // Get the existing appointment first
+        const [appointments] = await db.query(
+            `SELECT
+                appointment_id,
+                patient_id,
+                appointment_date,
+                appointment_time,
+                appointment_status
+             FROM appointments
+             WHERE appointment_id = ?`,
+            [id]
         );
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Appointment not found.' });
+
+        if (appointments.length === 0) {
+            return res.status(404).json({
+                error: 'Appointment not found.'
+            });
         }
-        res.json({ appointment_id: Number(id), appointment_status });
+
+        const appointment = appointments[0];
+
+        const oldStatus = String(
+            appointment.appointment_status || ''
+        ).trim().toLowerCase();
+
+        const newStatus = String(
+            appointment_status
+        ).trim();
+
+        // Update appointment status
+        const [result] = await db.query(
+            `UPDATE appointments
+             SET appointment_status = ?
+             WHERE appointment_id = ?`,
+            [newStatus, id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                error: 'Appointment not found.'
+            });
+        }
+
+        // Only create a notification when the status actually changes
+        if (oldStatus !== newStatus.toLowerCase()) {
+
+            let title = '';
+            let body = '';
+            let type = '';
+
+            const date = String(appointment.appointment_date || '');
+            const time = String(appointment.appointment_time || '');
+
+            switch (newStatus.toLowerCase()) {
+
+                case 'approved':
+                    type = 'appointment_approved';
+                    title = 'Appointment Approved';
+                    body =
+                        `Your appointment on ${date} at ${time} has been approved.`;
+                    break;
+
+                case 'rejected':
+                    type = 'appointment_rejected';
+                    title = 'Appointment Rejected';
+                    body =
+                        `Your appointment on ${date} at ${time} has been rejected.`;
+                    break;
+
+                case 'cancelled':
+                    type = 'appointment_cancelled';
+                    title = 'Appointment Cancelled';
+                    body =
+                        `Your appointment on ${date} at ${time} has been cancelled.`;
+                    break;
+
+                case 'completed':
+                    type = 'appointment_completed';
+                    title = 'Appointment Completed';
+                    body =
+                        `Your appointment on ${date} at ${time} has been marked as completed.`;
+                    break;
+            }
+
+            // Insert notification only for supported statuses
+            if (type && title && body) {
+                await db.query(
+                    `INSERT INTO notifications
+                        (patient_id, type, title, body)
+                     VALUES (?, ?, ?, ?)`,
+                    [
+                        appointment.patient_id,
+                        type,
+                        title,
+                        body
+                    ]
+                );
+
+                console.log(
+                    `🔔 Notification created for patient ${appointment.patient_id}: ${title}`
+                );
+            }
+        }
+
+        res.json({
+            appointment_id: Number(id),
+            appointment_status: newStatus
+        });
+
     } catch (error) {
-        console.error('❌ Error updating appointment status:', error.message);
-        res.status(500).json({ error: 'Failed to update appointment status.' });
+        console.error(
+            '❌ Error updating appointment status:',
+            error.message
+        );
+
+        res.status(500).json({
+            error: 'Failed to update appointment status.'
+        });
     }
 });
 
