@@ -161,52 +161,84 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
+
     const {
         name,
+        first_name,
+        last_name,
         age,
         gender,
         contact,
+        contact_number,
+        email,
+        date_of_birth,
         status
     } = req.body;
 
     try {
+        // Build the patient's full name.
+        // Mobile app sends first_name + last_name.
+        // Web/admin can still send name directly.
+        let updatedName = name;
+
+        if (!updatedName && (first_name !== undefined || last_name !== undefined)) {
+            const first = String(first_name || '').trim();
+            const last = String(last_name || '').trim();
+
+            updatedName = `${first} ${last}`.trim();
+        }
+
+        // Use whichever contact field was supplied.
+        const updatedContact =
+            contact_number !== undefined
+                ? contact_number
+                : contact;
+
+        // Update the fields that exist in your patients table.
         const query = `
             UPDATE patients
-            SET 
+            SET
                 name = ?,
-                age = ?,
                 gender = ?,
                 contact = ?,
-                status = ?
+                email = ?
             WHERE patient_id = ?
         `;
 
-        await db.query(query, [
-            name,
-            age,
-            gender,
-            contact,
-            status,
+        const [result] = await db.query(query, [
+            updatedName,
+            gender ?? null,
+            updatedContact ?? null,
+            email ?? null,
             id
         ]);
 
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Patient not found'
+            });
+        }
+
         res.json({
+            success: true,
+            message: 'Patient profile updated successfully.',
             patient_id: id,
-            name,
-            age,
-            gender,
-            contact,
-            status
+            name: updatedName,
+            gender: gender ?? null,
+            contact: updatedContact ?? null,
+            email: email ?? null
         });
 
     } catch (error) {
         console.error('Error updating patient:', error.message);
+
         res.status(500).json({
+            success: false,
             error: error.message
         });
     }
 });
-
 
 // =====================================================
 // 5. DELETE PATIENT
