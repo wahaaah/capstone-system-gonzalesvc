@@ -39,6 +39,47 @@ function formatTime12Hour(timeValue) {
 
 
 // ============================================================
+// HELPER: FORMAT DATE WITHOUT GMT / UTC CONVERSION
+// ============================================================
+
+function formatDateLong(dateValue) {
+    const dateString = String(dateValue || '').slice(0, 10);
+
+    const [year, month, day] = dateString.split('-');
+
+    const monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December'
+    ];
+
+    const monthNumber = Number(month);
+
+    if (
+        !year ||
+        !month ||
+        !day ||
+        Number.isNaN(monthNumber) ||
+        monthNumber < 1 ||
+        monthNumber > 12
+    ) {
+        return dateString;
+    }
+
+    return `${monthNames[monthNumber - 1]} ${Number(day)}, ${year}`;
+}
+
+
+// ============================================================
 // 1. GET: Fetch all active appointments
 // Includes Patient Name
 // ============================================================
@@ -321,8 +362,13 @@ router.put('/:id', async (req, res) => {
 
 
             // --------------------------------------------------
-            // FORMAT TIME TO 12-HOUR FORMAT
+            // FORMAT DATE AND TIME
             // --------------------------------------------------
+
+            const formattedDate =
+                formatDateLong(
+                    appointment_date
+                );
 
             const formattedTime =
                 formatTime12Hour(
@@ -347,7 +393,7 @@ router.put('/:id', async (req, res) => {
                         'Appointment Confirmed';
 
                     body =
-                        `Your appointment on ${appointment_date} at ${formattedTime} has been confirmed.`;
+                        `Your appointment on ${formattedDate} at ${formattedTime} has been confirmed.`;
 
                     break;
 
@@ -366,7 +412,7 @@ router.put('/:id', async (req, res) => {
                         'Appointment Rejected';
 
                     body =
-                        `Your appointment on ${appointment_date} at ${formattedTime} has been rejected.`;
+                        `Your appointment on ${formattedDate} at ${formattedTime} has been rejected.`;
 
                     break;
 
@@ -385,7 +431,7 @@ router.put('/:id', async (req, res) => {
                         'Appointment Cancelled';
 
                     body =
-                        `Your appointment on ${appointment_date} at ${formattedTime} has been cancelled.`;
+                        `Your appointment on ${formattedDate} at ${formattedTime} has been cancelled.`;
 
                     break;
 
@@ -403,7 +449,7 @@ router.put('/:id', async (req, res) => {
                         'Appointment Completed';
 
                     body =
-                        `Your appointment on ${appointment_date} at ${formattedTime} has been marked as completed.`;
+                        `Your appointment on ${formattedDate} at ${formattedTime} has been marked as completed.`;
 
                     break;
             }
@@ -588,15 +634,15 @@ router.patch('/:id', async (req, res) => {
 
 
             // --------------------------------------------------
-            // FORMAT TIME TO 12-HOUR FORMAT
+            // FORMAT DATE AND TIME
             // --------------------------------------------------
 
-            const date =
-                String(
-                    appointment.appointment_date || ''
+            const formattedDate =
+                formatDateLong(
+                    appointment.appointment_date
                 );
 
-            const time =
+            const formattedTime =
                 formatTime12Hour(
                     appointment.appointment_time
                 );
@@ -619,7 +665,7 @@ router.patch('/:id', async (req, res) => {
                         'Appointment Confirmed';
 
                     body =
-                        `Your appointment on ${date} at ${time} has been confirmed.`;
+                        `Your appointment on ${formattedDate} at ${formattedTime} has been confirmed.`;
 
                     break;
 
@@ -634,7 +680,7 @@ router.patch('/:id', async (req, res) => {
                         'Appointment Rejected';
 
                     body =
-                        `Your appointment on ${date} at ${time} has been rejected.`;
+                        `Your appointment on ${formattedDate} at ${formattedTime} has been rejected.`;
 
                     break;
 
@@ -649,7 +695,7 @@ router.patch('/:id', async (req, res) => {
                         'Appointment Cancelled';
 
                     body =
-                        `Your appointment on ${date} at ${time} has been cancelled.`;
+                        `Your appointment on ${formattedDate} at ${formattedTime} has been cancelled.`;
 
                     break;
 
@@ -663,7 +709,7 @@ router.patch('/:id', async (req, res) => {
                         'Appointment Completed';
 
                     body =
-                        `Your appointment on ${date} at ${time} has been marked as completed.`;
+                        `Your appointment on ${formattedDate} at ${formattedTime} has been marked as completed.`;
 
                     break;
             }
@@ -858,22 +904,14 @@ router.post(
 
                 // --------------------------------------------------
                 // FORMAT APPOINTMENT DATE
+                // NO new Date()
+                // NO GMT
+                // NO UTC DATE CONVERSION
                 // --------------------------------------------------
 
-                const date =
-                    new Date(
-                        appointment.appointment_date
-                    );
-
                 const formattedDate =
-                    date.toLocaleDateString(
-                        'en-US',
-                        {
-                            month: 'long',
-                            day: 'numeric',
-                            year: 'numeric',
-                            timeZone: 'UTC'
-                        }
+                    formatDateLong(
+                        appointment.appointment_date
                     );
 
 
