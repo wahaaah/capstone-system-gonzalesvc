@@ -1,0 +1,40 @@
+name: Check Appointment Reminders
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+      timezone: 'Asia/Manila'
+
+  workflow_dispatch:
+
+jobs:
+  check-reminders:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check appointment reminders
+        run: npm run check-reminders
+        env:
+          env:
+  MYSQLHOST: ${{ secrets.MYSQLHOST }}
+  MYSQLPORT: ${{ secrets.MYSQLPORT }}
+  MYSQLUSER: ${{ secrets.MYSQLUSER }}
+  MYSQLPASSWORD: ${{ secrets.MYSQLPASSWORD }}
+  MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
