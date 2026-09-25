@@ -21,7 +21,8 @@ const routeFiles = [
     { path: '/api/frames', file: './routes/frameRoutes' },
     { path: '/api/prescriptions', file: './routes/prescriptionRoutes' },
     { path: '/api/monitoring', file: './routes/monitoringRoutes' },
-    { path: '/api/upload', file: './routes/uploadRoutes' }
+    { path: '/api/upload', file: './routes/uploadRoutes' },
+    { path: '/api/notifications', file: './notificationRoutes' }
 ];
 
 routeFiles.forEach(r => {
