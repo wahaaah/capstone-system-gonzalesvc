@@ -77,36 +77,223 @@ router.post('/', async (req, res) => {
 // 3. PUT: Edit an existing appointment (date/time/purpose/status)
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { patient_id, appointment_date, appointment_time, purpose_of_visit, appointment_status } = req.body;
 
-    if (!patient_id || !appointment_date || !appointment_time || !purpose_of_visit) {
-        return res.status(400).json({ error: 'Please provide all operational fields.' });
+    const {
+        patient_id,
+        appointment_date,
+        appointment_time,
+        purpose_of_visit,
+        appointment_status
+    } = req.body;
+
+    if (
+        !patient_id ||
+        !appointment_date ||
+        !appointment_time ||
+        !purpose_of_visit
+    ) {
+        return res.status(400).json({
+            error: 'Please provide all operational fields.'
+        });
     }
 
     try {
-        // Only block the move if some OTHER appointment already holds that slot —
-        // excluding the row we're editing so you can keep (or just tweak) its own time.
+        // --------------------------------------------------
+        // GET THE EXISTING APPOINTMENT FIRST
+        // --------------------------------------------------
+
+        const [appointments] = await db.query(
+            `SELECT
+                appointment_id,
+                patient_id,
+                appointment_date,
+                appointment_time,
+                purpose_of_visit,
+                appointment_status
+             FROM appointments
+             WHERE appointment_id = ?`,
+            [id]
+        );
+
+        if (appointments.length === 0) {
+            return res.status(404).json({
+                error: 'Appointment not found.'
+            });
+        }
+
+        const oldAppointment = appointments[0];
+
+        const oldStatus = String(
+            oldAppointment.appointment_status || ''
+        ).trim().toLowerCase();
+
+        const newStatus = String(
+            appointment_status || 'Pending'
+        ).trim();
+
+        const newStatusLower = newStatus.toLowerCase();
+
+        // --------------------------------------------------
+        // CHECK IF THE NEW TIME SLOT IS ALREADY TAKEN
+        // --------------------------------------------------
+
         const [existing] = await db.query(
-            `SELECT * FROM appointments
-             WHERE appointment_date = ? AND appointment_time = ? AND appointment_status != 'Cancelled'
-             AND appointment_id != ?`,
-            [appointment_date, appointment_time, id]
+            `SELECT *
+             FROM appointments
+             WHERE appointment_date = ?
+               AND appointment_time = ?
+               AND appointment_status != 'Cancelled'
+               AND appointment_id != ?`,
+            [
+                appointment_date,
+                appointment_time,
+                id
+            ]
         );
 
         if (existing.length > 0) {
-            return res.status(409).json({ error: 'This time slot is already reserved by another appointment.' });
+            return res.status(409).json({
+                error:
+                    'This time slot is already reserved by another appointment.'
+            });
         }
+
+        // --------------------------------------------------
+        // UPDATE APPOINTMENT
+        // --------------------------------------------------
 
         const [result] = await db.query(
             `UPDATE appointments
-             SET patient_id = ?, appointment_date = ?, appointment_time = ?, purpose_of_visit = ?, appointment_status = ?
+             SET
+                patient_id = ?,
+                appointment_date = ?,
+                appointment_time = ?,
+                purpose_of_visit = ?,
+                appointment_status = ?
              WHERE appointment_id = ?`,
-            [patient_id, appointment_date, appointment_time, purpose_of_visit, appointment_status || 'Pending', id]
+            [
+                patient_id,
+                appointment_date,
+                appointment_time,
+                purpose_of_visit,
+                newStatus,
+                id
+            ]
         );
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Appointment not found.' });
+            return res.status(404).json({
+                error: 'Appointment not found.'
+            });
         }
+
+        // --------------------------------------------------
+        // CREATE NOTIFICATION ONLY WHEN STATUS CHANGED
+        // --------------------------------------------------
+
+        if (oldStatus !== newStatusLower) {
+
+            let type = '';
+            let title = '';
+            let body = '';
+
+            switch (newStatusLower) {
+
+                // ------------------------------------------
+                // APPROVED / CONFIRMED
+                // ------------------------------------------
+
+                case 'approved':
+                case 'confirmed':
+                case 'accepted':
+
+                    type = 'appointment_approved';
+                    title = 'Appointment Confirmed';
+
+                    body =
+                        `Your appointment on ${appointment_date} at ${appointment_time} has been confirmed.`;
+
+                    break;
+
+                // ------------------------------------------
+                // REJECTED
+                // ------------------------------------------
+
+                case 'rejected':
+                case 'declined':
+
+                    type = 'appointment_rejected';
+                    title = 'Appointment Rejected';
+
+                    body =
+                        `Your appointment on ${appointment_date} at ${appointment_time} has been rejected.`;
+
+                    break;
+
+                // ------------------------------------------
+                // CANCELLED
+                // ------------------------------------------
+
+                case 'cancelled':
+                case 'canceled':
+
+                    type = 'appointment_cancelled';
+                    title = 'Appointment Cancelled';
+
+                    body =
+                        `Your appointment on ${appointment_date} at ${appointment_time} has been cancelled.`;
+
+                    break;
+
+                // ------------------------------------------
+                // COMPLETED
+                // ------------------------------------------
+
+                case 'completed':
+
+                    type = 'appointment_completed';
+                    title = 'Appointment Completed';
+
+                    body =
+                        `Your appointment on ${appointment_date} at ${appointment_time} has been marked as completed.`;
+
+                    break;
+            }
+
+            // --------------------------------------------------
+            // INSERT NOTIFICATION
+            // --------------------------------------------------
+
+            if (type && title && body) {
+
+                await db.query(
+                    `INSERT INTO notifications
+                        (
+                            patient_id,
+                            appointment_id,
+                            type,
+                            title,
+                            body
+                        )
+                     VALUES (?, ?, ?, ?, ?)`,
+                    [
+                        oldAppointment.patient_id,
+                        Number(id),
+                        type,
+                        title,
+                        body
+                    ]
+                );
+
+                console.log(
+                    `🔔 Notification created for patient ${oldAppointment.patient_id}: ${title}`
+                );
+            }
+        }
+
+        // --------------------------------------------------
+        // RESPONSE
+        // --------------------------------------------------
 
         res.json({
             message: 'Appointment updated!',
@@ -115,11 +302,19 @@ router.put('/:id', async (req, res) => {
             appointment_date,
             appointment_time,
             purpose_of_visit,
-            appointment_status: appointment_status || 'Pending',
+            appointment_status: newStatus
         });
+
     } catch (error) {
-        console.error('❌ Error updating appointment:', error.message);
-        res.status(500).json({ error: 'Failed to update appointment record.' });
+
+        console.error(
+            '❌ Error updating appointment:',
+            error.message
+        );
+
+        res.status(500).json({
+            error: 'Failed to update appointment record.'
+        });
     }
 });
 
