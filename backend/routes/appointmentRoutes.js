@@ -291,4 +291,93 @@ router.get('/patient/:patient_id', async (req, res) => {
     }
 });
 
+// 6. POST: Check for upcoming appointment reminders
+router.post('/reminders/check', async (req, res) => {
+    try {
+        const [appointments] = await db.query(`
+            SELECT
+                a.appointment_id,
+                a.patient_id,
+                a.appointment_date,
+                a.appointment_time,
+                a.appointment_status
+            FROM appointments a
+            WHERE
+                LOWER(a.appointment_status) = 'approved'
+                AND TIMESTAMP(a.appointment_date, a.appointment_time)
+                    BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 24 HOUR)
+        `);
+
+        let created = 0;
+
+        for (const appointment of appointments) {
+
+            // Prevent duplicate reminders
+            const [existing] = await db.query(
+                `SELECT notification_id
+                 FROM notifications
+                 WHERE patient_id = ?
+                   AND type = 'appointment_reminder'
+                   AND body LIKE ?
+                 LIMIT 1`,
+                [
+                    appointment.patient_id,
+                    `%appointment_id:${appointment.appointment_id}%`
+                ]
+            );
+
+            if (existing.length > 0) {
+                continue;
+            }
+
+            const date = new Date(
+                appointment.appointment_date
+            );
+
+            const formattedDate = date.toLocaleDateString(
+                'en-US',
+                {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                }
+            );
+
+            const time = String(
+                appointment.appointment_time
+            ).slice(0, 5);
+
+            await db.query(
+                `INSERT INTO notifications
+                    (patient_id, type, title, body)
+                 VALUES (?, ?, ?, ?)`,
+                [
+                    appointment.patient_id,
+                    'appointment_reminder',
+                    'Appointment Reminder',
+                    `Your appointment is scheduled for ${formattedDate} at ${time}. [appointment_id:${appointment.appointment_id}]`
+                ]
+            );
+
+            created++;
+        }
+
+        res.json({
+            success: true,
+            appointments_found: appointments.length,
+            reminders_created: created
+        });
+
+    } catch (error) {
+        console.error(
+            '❌ Error checking appointment reminders:',
+            error.message
+        );
+
+        res.status(500).json({
+            error: 'Failed to check appointment reminders.'
+        });
+    }
+});
+
 module.exports = router;
