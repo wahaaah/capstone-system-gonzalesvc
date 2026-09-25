@@ -145,4 +145,44 @@ router.patch('/patient/:patient_id/read-all', async (req, res) => {
     }
 });
 
+
+// ======================================================
+// POST /api/notifications/test/:patient_id
+// Temporary test notification
+// ======================================================
+router.post('/test/:patient_id', async (req, res) => {
+    const { patient_id } = req.params;
+
+    try {
+        const [result] = await db.query(
+            `
+            INSERT INTO notifications
+                (patient_id, type, title, body)
+            VALUES (?, ?, ?, ?)
+            `,
+            [
+                patient_id,
+                'test',
+                'Test Notification',
+                'This is a test notification from the Gonzales Vision Clinic system.'
+            ]
+        );
+
+        res.status(201).json({
+            success: true,
+            notification_id: result.insertId
+        });
+
+    } catch (error) {
+        console.error(
+            '❌ Error creating test notification:',
+            error.message
+        );
+
+        res.status(500).json({
+            error: 'Failed to create test notification.'
+        });
+    }
+});
+
 module.exports = router;
