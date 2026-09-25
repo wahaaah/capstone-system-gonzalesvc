@@ -78,19 +78,19 @@ const formattedDate =
             const formattedTime =
                 `${hours}:${minutes} ${period}`;
 
-            // Create notification
-            await db.query(
-                `INSERT INTO notifications
-                    (patient_id, appointment_id, type, title, body)
-                 VALUES (?, ?, ?, ?, ?)`,
-                [
-                    appointment.patient_id,
-                    appointment.appointment_id,
-                    'appointment_reminder',
-                    'Appointment Reminder',
-                    `Your appointment is scheduled for ${formattedDate} at ${formattedTime}.`
-                ]
-            );
+        await db.query(
+    `INSERT INTO notifications
+        (patient_id, appointment_id, type, title, body)
+     VALUES (?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE notification_id = notification_id`,
+    [
+        appointment.patient_id,
+        appointment.appointment_id,
+        'appointment_reminder',
+        'Appointment Reminder',
+        `Your appointment is scheduled for ${formattedDate} at ${formattedTime}.`
+    ]
+);
 
             console.log(
                 `🔔 Reminder created for appointment #${appointment.appointment_id}`
@@ -103,17 +103,21 @@ const formattedDate =
             `✅ Reminder check complete. Found: ${appointments.length}, Created: ${created}`
         );
 
-    } catch (error) {
-        console.error(
-            '❌ Reminder check failed:',
-            error.message
-        );
+   } catch (error) {
+    console.error('❌ Reminder check failed:', {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        sqlState: error.sqlState,
+        sqlMessage: error.sqlMessage,
+        stack: error.stack
+    });
 
-        process.exitCode = 1;
-
-    } finally {
-        await db.end();
-    }
+    process.exitCode = 1;
+} finally {
+    await db.end();
+}
 }
 
 checkReminders();
