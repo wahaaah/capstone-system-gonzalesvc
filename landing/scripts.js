@@ -409,6 +409,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                 model =
                     gltf.scene;
 
+                    // =================================================
+// MEASURE ORIGINAL 3D FRAME MODEL
+// =================================================
+
+model.updateMatrixWorld(true);
+
+const box = new THREE.Box3().setFromObject(model);
+
+const modelSize = new THREE.Vector3();
+
+box.getSize(modelSize);
+
+const modelCenter = new THREE.Vector3();
+
+box.getCenter(modelCenter);
+
+console.log('📏 ===== FRAME MODEL MEASUREMENTS =====');
+console.log('📏 Width:', modelSize.x);
+console.log('📏 Height:', modelSize.y);
+console.log('📏 Depth:', modelSize.z);
+
+console.log(
+    '📍 Model Center:',
+    modelCenter.x,
+    modelCenter.y,
+    modelCenter.z
+);
+
+flutterLog(
+    `📏 FRAME MODEL SIZE: ` +
+    `W=${modelSize.x.toFixed(4)}, ` +
+    `H=${modelSize.y.toFixed(4)}, ` +
+    `D=${modelSize.z.toFixed(4)}`
+);
+
                 // IMPORTANT:
                 // Keep original base scale.
                 model.scale.set(
@@ -1274,6 +1309,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                             scaleFactor
                         );
                     }
+
+                    console.log(
+    '👁️ Eye distance:',
+    distanceBetweenEyes.toFixed(2),
+    'px'
+);
 
                     // =================================================
                     // STATUS
