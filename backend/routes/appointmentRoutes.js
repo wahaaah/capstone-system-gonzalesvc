@@ -294,71 +294,81 @@ router.get('/patient/:patient_id', async (req, res) => {
 // 6. POST: Check for upcoming appointment reminders
 router.post('/reminders/check', async (req, res) => {
     try {
-       const [appointments] = await db.query(`
-    SELECT
-        a.appointment_id,
-        a.patient_id,
-        a.appointment_date,
-        a.appointment_time,
-        a.appointment_status
-    FROM appointments a
-    WHERE
-        LOWER(a.appointment_status) = 'approved'
-        AND TIMESTAMP(a.appointment_date, a.appointment_time)
-            BETWEEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 8 HOUR)
-            AND DATE_ADD(
-                DATE_ADD(UTC_TIMESTAMP(), INTERVAL 8 HOUR),
-                INTERVAL 24 HOUR
-            )
-`);
+        const [appointments] = await db.query(`
+            SELECT
+                a.appointment_id,
+                a.patient_id,
+                a.appointment_date,
+                a.appointment_time,
+                a.appointment_status
+            FROM appointments a
+            WHERE
+                LOWER(a.appointment_status) = 'approved'
+                AND TIMESTAMP(a.appointment_date, a.appointment_time)
+                    BETWEEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 8 HOUR)
+                    AND DATE_ADD(
+                        DATE_ADD(UTC_TIMESTAMP(), INTERVAL 8 HOUR),
+                        INTERVAL 24 HOUR
+                    )
+        `);
+
         let created = 0;
 
         for (const appointment of appointments) {
 
-            // Prevent duplicate reminders
+            // Check if a reminder already exists for this appointment
             const [existing] = await db.query(
                 `SELECT notification_id
                  FROM notifications
-                 WHERE patient_id = ?
+                 WHERE appointment_id = ?
                    AND type = 'appointment_reminder'
-                   AND body LIKE ?
                  LIMIT 1`,
-                [
-                    appointment.patient_id,
-                    `%appointment_id:${appointment.appointment_id}%`
-                ]
+                [appointment.appointment_id]
             );
 
             if (existing.length > 0) {
                 continue;
             }
 
-            const date = new Date(
-                appointment.appointment_date
-            );
+            // Format appointment date
+            const date = new Date(appointment.appointment_date);
 
             const formattedDate = date.toLocaleDateString(
                 'en-US',
                 {
                     month: 'long',
                     day: 'numeric',
-                    year: 'numeric'
+                    year: 'numeric',
+                    timeZone: 'UTC'
                 }
             );
 
-            const time = String(
+            // Format appointment time
+            const timeParts = String(
                 appointment.appointment_time
-            ).slice(0, 5);
+            ).slice(0, 8).split(':');
 
+            let hours = Number(timeParts[0]);
+            const minutes = timeParts[1];
+
+            const period = hours >= 12 ? 'PM' : 'AM';
+
+            hours = hours % 12 || 12;
+
+            const formattedTime =
+                `${hours}:${minutes} ${period}`;
+
+            // Create notification
             await db.query(
                 `INSERT INTO notifications
-                    (patient_id, type, title, body)
-                 VALUES (?, ?, ?, ?)`,
+                    (patient_id, appointment_id, type, title, body)
+                 VALUES (?, ?, ?, ?, ?)`,
                 [
                     appointment.patient_id,
+                    appointment.appointment_id,
                     'appointment_reminder',
                     'Appointment Reminder',
-                    `Your appointment is scheduled for ${formattedDate} at ${time}. [appointment_id:${appointment.appointment_id}]`
+                    `Your appointment is scheduled for ${formattedDate} at ${formattedTime}.`
                 ]
             );
 
