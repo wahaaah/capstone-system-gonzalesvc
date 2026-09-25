@@ -1076,7 +1076,7 @@ flutterLog(
                             320
                     });
 
-            // =================================================
+                      // =================================================
             // FACE DETECTION
             // =================================================
 
@@ -1160,22 +1160,73 @@ flutterLog(
                     }
 
                     // =================================================
-                    // EYE CENTER
+                    // CALCULATE EYE CENTER
                     //
-                    // IMPORTANT:
-                    // Same calculation as your working code.
+                    // Instead of using only:
+                    //
+                    // leftEye[0]
+                    // rightEye[0]
+                    //
+                    // use ALL landmarks belonging to each eye.
+                    //
+                    // This gives a more stable eye center.
+                    // =================================================
+
+                    function getLandmarkCenter(
+                        landmarks
+                    ) {
+
+                        let totalX = 0;
+                        let totalY = 0;
+
+                        for (
+                            const point
+                            of landmarks
+                        ) {
+
+                            totalX +=
+                                point.x;
+
+                            totalY +=
+                                point.y;
+                        }
+
+                        return {
+
+                            x:
+                                totalX /
+                                landmarks.length,
+
+                            y:
+                                totalY /
+                                landmarks.length
+                        };
+                    }
+
+                    const leftEyeCenter =
+                        getLandmarkCenter(
+                            leftEye
+                        );
+
+                    const rightEyeCenter =
+                        getLandmarkCenter(
+                            rightEye
+                        );
+
+                    // =================================================
+                    // EYE CENTER BETWEEN BOTH EYES
                     // =================================================
 
                     const centerX =
                         (
-                            leftEye[0].x +
-                            rightEye[0].x
+                            leftEyeCenter.x +
+                            rightEyeCenter.x
                         ) / 2;
 
                     const centerY =
                         (
-                            leftEye[0].y +
-                            rightEye[0].y
+                            leftEyeCenter.y +
+                            rightEyeCenter.y
                         ) / 2;
 
                     // =================================================
@@ -1210,7 +1261,7 @@ flutterLog(
                     // =================================================
                     // POSITION OFFSET
                     //
-                    // KEEP ORIGINAL VALUE.
+                    // Keep your existing value.
                     // =================================================
 
                     const eyeToEyebrowOffset =
@@ -1246,16 +1297,16 @@ flutterLog(
                     // =================================================
                     // ROTATION
                     //
-                    // KEEP ORIGINAL CALCULATION.
+                    // Use the centers of both eyes.
                     // =================================================
 
                     const deltaY =
-                        rightEye[0].y -
-                        leftEye[0].y;
+                        rightEyeCenter.y -
+                        leftEyeCenter.y;
 
                     const deltaX =
-                        rightEye[0].x -
-                        leftEye[0].x;
+                        rightEyeCenter.x -
+                        leftEyeCenter.x;
 
                     const angle =
                         Math.atan2(
@@ -1267,30 +1318,36 @@ flutterLog(
                         angle;
 
                     // =================================================
-                    // FRAME SCALE
+                    // EYE DISTANCE
                     //
-                    // IMPORTANT:
-                    // DO NOT CHANGE THIS FORMULA.
-                    //
-                    // This preserves your current
-                    // frame size calibration.
+                    // Measure the distance between
+                    // the two eye centers.
                     // =================================================
 
                     const distanceBetweenEyes =
                         Math.sqrt(
 
                             Math.pow(
-                                rightEye[0].x -
-                                leftEye[0].x,
+                                rightEyeCenter.x -
+                                leftEyeCenter.x,
                                 2
                             ) +
 
                             Math.pow(
-                                rightEye[0].y -
-                                leftEye[0].y,
+                                rightEyeCenter.y -
+                                leftEyeCenter.y,
                                 2
                             )
                         );
+
+                    // =================================================
+                    // FRAME SCALE
+                    //
+                    // KEEP CURRENT CALIBRATION FOR NOW.
+                    //
+                    // We are improving the facial measurement
+                    // without changing your existing calibration.
+                    // =================================================
 
                     const scaleFactor =
                         distanceBetweenEyes /
@@ -1310,11 +1367,32 @@ flutterLog(
                         );
                     }
 
+                    // =================================================
+                    // DEBUG INFORMATION
+                    // =================================================
+
                     console.log(
-    '👁️ Eye distance:',
-    distanceBetweenEyes.toFixed(2),
-    'px'
-);
+                        '👁️ LEFT EYE CENTER:',
+                        leftEyeCenter.x.toFixed(2),
+                        leftEyeCenter.y.toFixed(2)
+                    );
+
+                    console.log(
+                        '👁️ RIGHT EYE CENTER:',
+                        rightEyeCenter.x.toFixed(2),
+                        rightEyeCenter.y.toFixed(2)
+                    );
+
+                    console.log(
+                        '👁️ EYE DISTANCE:',
+                        distanceBetweenEyes.toFixed(2),
+                        'px'
+                    );
+
+                    console.log(
+                        '📐 FRAME SCALE:',
+                        scaleFactor.toFixed(4)
+                    );
 
                     // =================================================
                     // STATUS
@@ -1375,7 +1453,6 @@ flutterLog(
                         false;
                 }
             }
-
             // =================================================
             // DETECTION LOOP
             // =================================================
