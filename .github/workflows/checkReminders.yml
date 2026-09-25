@@ -15,6 +15,13 @@ jobs:
       run:
         working-directory: backend
 
+    env:
+      MYSQLHOST: ${{ secrets.MYSQLHOST }}
+      MYSQLPORT: ${{ secrets.MYSQLPORT }}
+      MYSQLUSER: ${{ secrets.MYSQLUSER }}
+      MYSQLPASSWORD: ${{ secrets.MYSQLPASSWORD }}
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -31,10 +38,3 @@ jobs:
 
       - name: Check appointment reminders
         run: npm run check-reminders
-        env:
-          env:
-  MYSQLHOST: ${{ secrets.MYSQLHOST }}
-  MYSQLPORT: ${{ secrets.MYSQLPORT }}
-  MYSQLUSER: ${{ secrets.MYSQLUSER }}
-  MYSQLPASSWORD: ${{ secrets.MYSQLPASSWORD }}
-  MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
