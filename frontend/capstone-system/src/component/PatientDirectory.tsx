@@ -266,8 +266,13 @@ export default function PatientDirectory() {
             </div>
           )}
 
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-sm">
+          {/* =====================================================
+              DESKTOP PATIENT TABLE
+              Hidden on small screens so the records do not
+              become horizontally squeezed.
+          ===================================================== */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-500 font-medium">
                   <th className="p-4">Patient ID</th>
@@ -288,9 +293,11 @@ export default function PatientDirectory() {
                       <td className="p-4 text-slate-500 font-mono text-xs">{patient.last_visit}</td>
                       <td className="p-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          patient.status === 'Active' ? 'bg-green-50 text-green-700 border border-green-200' : 
-                          patient.status === 'Pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 
-                          'bg-slate-100 text-slate-700 border border-slate-200'
+                          patient.status === 'Active'
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : patient.status === 'Pending'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-slate-100 text-slate-700 border border-slate-200'
                         }`}>
                           {patient.status}
                         </span>
@@ -332,6 +339,103 @@ export default function PatientDirectory() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* =====================================================
+              MOBILE PATIENT CARDS
+              Replaces the wide table on phones.
+          ===================================================== */}
+          <div className="sm:hidden p-3 space-y-3">
+            {filteredPatients.length > 0 ? (
+              filteredPatients.map((patient) => (
+                <div
+                  key={patient.patient_id}
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  {/* Patient name + status */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-blue-600">
+                        {patient.patient_id}
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-slate-900 break-words">
+                        {patient.name}
+                      </p>
+                    </div>
+
+                    <span className={`shrink-0 inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold ${
+                      patient.status === 'Active'
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : patient.status === 'Pending'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200'
+                    }`}>
+                      {patient.status}
+                    </span>
+                  </div>
+
+                  {/* Patient details */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-4 pt-3 border-t border-slate-100">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Age / Sex
+                      </p>
+                      <p className="mt-1 text-xs text-slate-700 break-words">
+                        {patient.age} yrs / {patient.gender}
+                      </p>
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Last Visit
+                      </p>
+                      <p className="mt-1 text-xs text-slate-600 break-words">
+                        {patient.last_visit || 'No visits'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
+                    <button
+                      onClick={() => setSelectedPatient(patient)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer"
+                      title="Open Clinical Preview"
+                    >
+                      <Eye size={14} />
+                      <span>View</span>
+                    </button>
+
+                    <button
+                      onClick={(e) => handleOpenEditModal(patient, e)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer"
+                      title="Modify Account Properties"
+                    >
+                      <Pencil size={14} />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      onClick={(e) => handleDeletePatient(patient.patient_id, e)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
+                      title="Purge Profile"
+                    >
+                      <Trash2 size={14} />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center text-slate-400">
+                <div className="flex flex-col items-center justify-center space-y-2">
+                  <UserX size={24} className="text-slate-300" />
+                  <span className="text-xs">
+                    No matched patient indexes found in MariaDB.
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
           <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 text-xs text-slate-400 font-medium">
             Live Row Target Context: {filteredPatients.length} profiles loaded from schema
