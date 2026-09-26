@@ -40,6 +40,12 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
   const [editError, setEditError] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [isConfirming, setIsConfirming] = useState(false);
+
   const [formPatientId, setFormPatientId] = useState('');
   const [formDate, setFormDate] = useState(todayString);
   const [formTime, setFormTime] = useState('');
@@ -142,23 +148,46 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
     }
   };
 
+  const openConfirmation = (title: string, message: string, action: () => void) => {
+    setConfirmTitle(title);
+    setConfirmMessage(message);
+    setConfirmAction(() => action);
+    setIsConfirmModalOpen(true);
+  };
+
+  const closeConfirmation = () => {
+    if (isConfirming) return;
+    setIsConfirmModalOpen(false);
+    setConfirmAction(null);
+    setConfirmTitle('');
+    setConfirmMessage('');
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+    setIsConfirming(true);
+    try {
+      await confirmAction();
+      setIsConfirmModalOpen(false);
+      setConfirmAction(null);
+      setConfirmTitle('');
+      setConfirmMessage('');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   const handleAcceptRequest = async (appointment: Appointment) => {
-  try {
     const targetTime = appointment.appointment_time?.substring(0, 5);
     const targetDate = appointment.appointment_date?.split('T')[0];
 
     if (targetDate && targetDate < todayString) {
-      alert("Cannot accept request: The requested date is in the past.");
+      alert('Cannot accept request: The requested date is in the past.');
       return;
     }
 
-    if (
-      targetDate &&
-      targetDate === todayString &&
-      targetTime &&
-      isSlotInPast(targetDate, targetTime + ':00')
-    ) {
-      alert("Cannot accept request: The requested time slot has already passed today.");
+    if (targetDate && targetDate === todayString && targetTime && isSlotInPast(targetDate, targetTime + ':00')) {
+      alert('Cannot accept request: The requested time slot has already passed today.');
       return;
     }
 
@@ -170,37 +199,44 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
     );
 
     if (isAlreadyOccupied) {
-      alert(
-        "Cannot accept request: This slot has already been booked manually in the interim."
-      );
+      alert('Cannot accept request: This slot has already been booked manually in the interim.');
       return;
     }
 
     const targetId = appointment.id || appointment.appointment_id;
-
     if (!targetId) {
-      alert("Error: Cannot process request. Missing Appointment ID.");
+      alert('Error: Cannot process request. Missing Appointment ID.');
       return;
     }
 
-    if (appointmentService.update) {
-      await appointmentService.update(targetId, {
-        ...appointment,
-        appointment_status: 'Confirmed'
-      });
-    } else {
-      await appointmentService.create({
-        ...appointment,
-        appointment_status: 'Confirmed'
-      });
-    }
+    const patientName = patientMap.get(String(appointment.patient_id)) || appointment.patient_id;
+    const selectedSlot = standardTimeSlots.find(slot => slot.raw.substring(0, 5) === targetTime);
+    const displayTime = selectedSlot?.display || appointment.appointment_time;
 
-    await loadSchedule();
-
-  } catch (err: any) {
-    alert(`Error updating request: ${err.message}`);
-  }
-};
+    openConfirmation(
+      'Confirm Appointment',
+      `Are you sure you want to accept the appointment request from ${patientName} for ${targetDate} at ${displayTime}?`,
+      async () => {
+        try {
+          if (appointmentService.update) {
+            await appointmentService.update(targetId, {
+              ...appointment,
+              appointment_status: 'Confirmed'
+            });
+          } else {
+            await appointmentService.create({
+              ...appointment,
+              appointment_status: 'Confirmed'
+            });
+          }
+          await loadSchedule();
+        } catch (err: any) {
+          alert(`Error updating request: ${err.message}`);
+          throw err;
+        }
+      }
+    );
+  };
 
   const handleCancelRequest = async (appointment: Appointment) => {
   const targetId = appointment.id || appointment.appointment_id;
@@ -231,6 +267,8 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
 
 
   // Filter patients using single 'name' and 'patient_id' properties
+  const isWalkInPatient = formPatientId.startsWith('WI-');
+
   const filteredPatientOptions = patients.filter(p => {
     const pid = p.patient_id || '';
     const patientName = p.name || '';
@@ -257,6 +295,7 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
     setSelectedViewDate(todayString);
     setFormPurpose('Walk-in Consultation');
     setSelectedPatient(null);
+    setIsPatientDropdownOpen(false);
   };
 
   const handleBookSlot = async (e: React.FormEvent) => {
@@ -279,26 +318,38 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
       return;
     }
 
-    try {
-      await appointmentService.create({
-        patient_id: formPatientId,
-        appointment_date: formDate,
-        appointment_time: formTime,
-        purpose_of_visit: formPurpose,
-        appointment_status: 'Pending'
-      });
-      setSuccessMessage('Reservation confirmed!');
-      setSelectedViewDate(formDate);
-      setFormPatientId(''); 
-      setPatientSearchQuery('');
-      setSelectedPatient(null);
-      setFormDate(todayString); 
-      setFormTime(''); 
-      setFormPurpose('');
-      loadSchedule();
-    } catch (err: any) {
-      setErrorMessage(err.message);
-    }
+    const patientName = selectedPatient?.name || patientMap.get(formPatientId) || formPatientId;
+    const selectedSlot = standardTimeSlots.find(slot => slot.raw === formTime);
+    const displayTime = selectedSlot?.display || formTime;
+
+    openConfirmation(
+      'Confirm Reservation',
+      `Are you sure you want to create this appointment for ${patientName} on ${formDate} at ${displayTime} for "${formPurpose}"?`,
+      async () => {
+        try {
+          await appointmentService.create({
+            patient_id: formPatientId,
+            appointment_date: formDate,
+            appointment_time: formTime,
+            purpose_of_visit: formPurpose,
+            appointment_status: 'Pending'
+          });
+
+          setSuccessMessage('Reservation confirmed!');
+          setSelectedViewDate(formDate);
+          setFormPatientId('');
+          setPatientSearchQuery('');
+          setSelectedPatient(null);
+          setFormDate(todayString);
+          setFormTime('');
+          setFormPurpose('');
+          await loadSchedule();
+        } catch (err: any) {
+          setErrorMessage(err.message);
+          throw err;
+        }
+      }
+    );
   };
 
   const openEditModal = (appointment: Appointment) => {
@@ -335,37 +386,56 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
       return;
     }
 
-    setIsSavingEdit(true);
-    try {
-      await appointmentService.update(targetId, {
-        ...editingAppointment,
-        appointment_date: editDate,
-        appointment_time: editTime,
-        purpose_of_visit: editPurpose,
-      });
-      closeEditModal();
-      loadSchedule();
-    } catch (err: any) {
-      setEditError(err.message || 'Failed to save changes.');
-    } finally {
-      setIsSavingEdit(false);
-    }
+    const patientName = patientMap.get(String(editingAppointment.patient_id)) || editingAppointment.patient_id;
+    const selectedSlot = standardTimeSlots.find(slot => slot.raw === editTime);
+    const displayTime = selectedSlot?.display || editTime;
+
+    openConfirmation(
+      'Confirm Changes',
+      `Are you sure you want to save the changes to ${patientName}'s appointment for ${editDate} at ${displayTime}?`,
+      async () => {
+        setIsSavingEdit(true);
+        try {
+          await appointmentService.update(targetId, {
+            ...editingAppointment,
+            appointment_date: editDate,
+            appointment_time: editTime,
+            purpose_of_visit: editPurpose,
+          });
+          closeEditModal();
+          await loadSchedule();
+        } catch (err: any) {
+          setEditError(err.message || 'Failed to save changes.');
+          throw err;
+        } finally {
+          setIsSavingEdit(false);
+        }
+      }
+    );
   };
 
   const handleCancelAppointment = async () => {
     if (!editingAppointment) return;
+
     const targetId = editingAppointment.appointment_id || editingAppointment.id;
     if (!targetId) return;
 
-    if (!window.confirm('Cancel this appointment? The slot will become available again.')) return;
+    const patientName = patientMap.get(String(editingAppointment.patient_id)) || editingAppointment.patient_id;
 
-    try {
-      await appointmentService.updateStatus(targetId, 'Cancelled');
-      closeEditModal();
-      loadSchedule();
-    } catch (err: any) {
-      setEditError(err.message || 'Failed to cancel appointment.');
-    }
+    openConfirmation(
+      'Cancel Appointment',
+      `Are you sure you want to cancel the appointment for ${patientName}? The appointment slot will become available again.`,
+      async () => {
+        try {
+          await appointmentService.updateStatus(targetId, 'Cancelled');
+          closeEditModal();
+          await loadSchedule();
+        } catch (err: any) {
+          setEditError(err.message || 'Failed to cancel appointment.');
+          throw err;
+        }
+      }
+    );
   };
 
   const getDaysInMonth = () => {
@@ -538,14 +608,26 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
                  placeholder="Search patient name or ID..." 
                  value={patientSearchQuery} 
                  onChange={(e) => {
-                   setPatientSearchQuery(e.target.value);
-                   setIsPatientDropdownOpen(true);
-                   if (!e.target.value) {
-                     setSelectedPatient(null);
+                   const value = e.target.value;
+                   setPatientSearchQuery(value);
+                   setSelectedPatient(null);
+
+                   if (!value) {
+                     setIsPatientDropdownOpen(false);
                      setFormPatientId('');
+                   } else if (isWalkInPatient) {
+                     // The user is editing the walk-in value, so stop treating it as a walk-in ID.
+                     setFormPatientId('');
+                     setIsPatientDropdownOpen(true);
+                   } else {
+                     setIsPatientDropdownOpen(true);
                    }
                  }} 
-                 onFocus={() => setIsPatientDropdownOpen(true)}
+                 onFocus={() => {
+                   if (!isWalkInPatient) {
+                     setIsPatientDropdownOpen(true);
+                   }
+                 }}
                  className="w-full text-sm pl-9 pr-8 border rounded-lg p-2 bg-white" 
                />
                {patientSearchQuery && (
@@ -564,7 +646,7 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
              </div>
 
              {/* Live Dropdown Box */}
-             {isPatientDropdownOpen && patientSearchQuery && !selectedPatient && (
+             {isPatientDropdownOpen && patientSearchQuery && !selectedPatient && !isWalkInPatient && (
                <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
                  {isLoadingPatients ? (
                    <div className="p-3 text-center text-xs text-slate-400 flex items-center justify-center space-x-2">
@@ -765,6 +847,49 @@ export default function AppointmentScheduler({ preSelectedId, clearPreSelected, 
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION MODAL */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-md rounded-xl border border-slate-200 shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                  <ShieldAlert size={20} className="text-blue-600" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">{confirmTitle}</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Please confirm this action</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5">
+              <p className="text-sm text-slate-600 leading-relaxed">{confirmMessage}</p>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeConfirmation}
+                disabled={isConfirming}
+                className="text-xs font-semibold px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-white disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                disabled={isConfirming}
+                className="text-xs font-semibold px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {isConfirming && <Loader2 size={14} className="animate-spin" />}
+                {isConfirming ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
           </div>
         </div>
       )}
