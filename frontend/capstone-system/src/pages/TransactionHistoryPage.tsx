@@ -1,12 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { posService } from '../services/posService';
-import {
-  Search,
-  Eye,
-  X,
-  Receipt,
-  Glasses
-} from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { posService } from "../services/posService";
+import { Search, Eye, X, Receipt, Glasses } from "lucide-react";
 
 interface TransactionItem {
   id: string | number;
@@ -29,48 +23,36 @@ interface Transaction {
   payment_status?: string;
 }
 
-const SERVER_HOST =
-  'https://gonzalesvisionclinic.onrender.com';
+const SERVER_HOST = "https://gonzalesvisionclinic.onrender.com";
 
-const formatImageUrl = (
-  url?: string | null
-): string => {
-
-  if (!url) return '';
+const formatImageUrl = (url?: string | null): string => {
+  if (!url) return "";
 
   if (
-    url.startsWith('http://') ||
-    url.startsWith('https://') ||
-    url.startsWith('blob:')
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("blob:")
   ) {
     return url;
   }
 
-  return `${SERVER_HOST}${
-    url.startsWith('/') ? '' : '/'
-  }${url}`;
+  return `${SERVER_HOST}${url.startsWith("/") ? "" : "/"}${url}`;
 };
 
 export const TransactionHistoryPage: React.FC = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  const [transactions, setTransactions] =
-    useState<Transaction[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const [loading, setLoading] =
-    useState<boolean>(true);
-
-  const [error, setError] =
-    useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // =========================================================
   // FILTER STATES
   // =========================================================
 
-  const [searchQuery, setSearchQuery] =
-    useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const [selectedDate, setSelectedDate] =
-    useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
   // =========================================================
   // MODAL STATE
@@ -79,82 +61,53 @@ export const TransactionHistoryPage: React.FC = () => {
   const [activeTransaction, setActiveTransaction] =
     useState<Transaction | null>(null);
 
-  const [loadingItems, setLoadingItems] =
-    useState<boolean>(false);
+  const [loadingItems, setLoadingItems] = useState<boolean>(false);
 
   // =========================================================
   // LOAD TRANSACTIONS
   // =========================================================
 
   useEffect(() => {
-
     posService
       .getTransactions()
       .then((data: any) => {
-
         setTransactions(data);
         setLoading(false);
-
       })
       .catch((err: any) => {
+        console.error("Failed to load transactions:", err);
 
-        console.error(
-          'Failed to load transactions:',
-          err
-        );
-
-        setError(
-          'Failed to load transaction history.'
-        );
+        setError("Failed to load transaction history.");
 
         setLoading(false);
-
       });
-
   }, []);
 
   // =========================================================
   // VIEW TRANSACTION DETAILS
   // =========================================================
 
-  const handleViewDetails = async (
-    tx: Transaction
-  ) => {
-
+  const handleViewDetails = async (tx: Transaction) => {
     setActiveTransaction(tx);
 
     if (!tx.items) {
-
       setLoadingItems(true);
 
       try {
+        const itemsData = await posService.getTransactionItems(tx.id);
 
-        const itemsData =
-          await posService.getTransactionItems(
-            tx.id
-          );
-
-        setActiveTransaction(
-          prev =>
-            prev
-              ? {
-                  ...prev,
-                  items: itemsData
-                }
-              : null
+        setActiveTransaction((prev) =>
+          prev
+            ? {
+                ...prev,
+                items: itemsData,
+              }
+            : null,
         );
-
       } catch (err) {
-
-        console.error(
-          'Failed to load transaction items:',
-          err
-        );
-
+        console.error("Failed to load transaction items:", err);
       } finally {
-
         setLoadingItems(false);
-
       }
     }
   };
@@ -163,60 +116,38 @@ export const TransactionHistoryPage: React.FC = () => {
   // FILTER TRANSACTIONS
   // =========================================================
 
-  const filteredTransactions =
-    transactions.filter((tx) => {
+  const filteredTransactions = transactions.filter((tx) => {
+    const customerName = (
+      tx.patient_name ||
+      tx.customer_name ||
+      "Walk-in / Guest"
+    ).toLowerCase();
 
-      const customerName = (
-        tx.patient_name ||
-        tx.customer_name ||
-        'Walk-in / Guest'
-      ).toLowerCase();
+    const txId = String(tx.id);
 
-      const txId =
-        String(tx.id);
+    const matchesSearch =
+      customerName.includes(searchQuery.toLowerCase()) ||
+      txId.includes(searchQuery);
 
-      const matchesSearch =
-        customerName.includes(
-          searchQuery.toLowerCase()
-        ) ||
-        txId.includes(searchQuery);
+    let matchesDate = true;
 
-      let matchesDate = true;
+    if (selectedDate) {
+      const rawDate = tx.created_at || tx.date || "";
 
-      if (selectedDate) {
+      if (rawDate) {
+        const txDate = new Date(rawDate).toISOString().split("T")[0];
 
-        const rawDate =
-          tx.created_at ||
-          tx.date ||
-          '';
-
-        if (rawDate) {
-
-          const txDate =
-            new Date(rawDate)
-              .toISOString()
-              .split('T')[0];
-
-          matchesDate =
-            txDate === selectedDate;
-
-        } else {
-
-          matchesDate = false;
-
-        }
+        matchesDate = txDate === selectedDate;
+      } else {
+        matchesDate = false;
       }
+    }
 
-      return (
-        matchesSearch &&
-        matchesDate
-      );
-    });
+    return matchesSearch && matchesDate;
+  });
 
   return (
-
     <div className="w-full min-w-0 p-4 sm:p-6">
-
       {/* =====================================================
           PAGE HEADER
       ===================================================== */}
@@ -232,9 +163,7 @@ export const TransactionHistoryPage: React.FC = () => {
           mb-6
         "
       >
-
         <div className="min-w-0">
-
           <h1
             className="
               text-xl
@@ -255,10 +184,9 @@ export const TransactionHistoryPage: React.FC = () => {
               break-words
             "
           >
-            View and track all completed
-            point-of-sale transactions and receipts.
+            View and track all completed point-of-sale transactions and
+            receipts.
           </p>
-
         </div>
 
         {/* =================================================
@@ -277,7 +205,6 @@ export const TransactionHistoryPage: React.FC = () => {
             md:w-auto
           "
         >
-
           {/* SEARCH */}
 
           <div
@@ -288,7 +215,6 @@ export const TransactionHistoryPage: React.FC = () => {
               md:w-64
             "
           >
-
             <Search
               className="
                 absolute
@@ -303,9 +229,7 @@ export const TransactionHistoryPage: React.FC = () => {
               type="text"
               placeholder="Search ID or name..."
               value={searchQuery}
-              onChange={(e) =>
-                setSearchQuery(e.target.value)
-              }
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="
                 w-full
                 pl-9
@@ -321,7 +245,6 @@ export const TransactionHistoryPage: React.FC = () => {
                 bg-white
               "
             />
-
           </div>
 
           {/* DATE */}
@@ -332,13 +255,10 @@ export const TransactionHistoryPage: React.FC = () => {
               sm:w-auto
             "
           >
-
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) =>
-                setSelectedDate(e.target.value)
-              }
+              onChange={(e) => setSelectedDate(e.target.value)}
               className="
                 w-full
                 px-3
@@ -354,18 +274,14 @@ export const TransactionHistoryPage: React.FC = () => {
                 text-slate-600
               "
             />
-
           </div>
 
           {/* CLEAR DATE */}
 
           {selectedDate && (
-
             <button
               type="button"
-              onClick={() =>
-                setSelectedDate('')
-              }
+              onClick={() => setSelectedDate("")}
               className="
                 text-xs
                 text-blue-600
@@ -376,11 +292,8 @@ export const TransactionHistoryPage: React.FC = () => {
             >
               Clear Date
             </button>
-
           )}
-
         </div>
-
       </div>
 
       {/* =====================================================
@@ -388,7 +301,6 @@ export const TransactionHistoryPage: React.FC = () => {
       ===================================================== */}
 
       {error && (
-
         <div
           className="
             mb-4
@@ -402,7 +314,6 @@ export const TransactionHistoryPage: React.FC = () => {
         >
           {error}
         </div>
-
       )}
 
       {/* =====================================================
@@ -422,15 +333,10 @@ export const TransactionHistoryPage: React.FC = () => {
           border-slate-200
         "
       >
-
         <div className="overflow-x-auto">
-
           <table className="min-w-full divide-y divide-slate-200">
-
             <thead className="bg-slate-50">
-
               <tr>
-
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Transaction ID
                 </th>
@@ -450,17 +356,12 @@ export const TransactionHistoryPage: React.FC = () => {
                 <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Actions
                 </th>
-
               </tr>
-
             </thead>
 
             <tbody className="bg-white divide-y divide-slate-200">
-
               {loading ? (
-
                 <tr>
-
                   <td
                     colSpan={5}
                     className="
@@ -473,13 +374,9 @@ export const TransactionHistoryPage: React.FC = () => {
                   >
                     Loading transactions...
                   </td>
-
                 </tr>
-
               ) : filteredTransactions.length === 0 ? (
-
                 <tr>
-
                   <td
                     colSpan={5}
                     className="
@@ -492,13 +389,9 @@ export const TransactionHistoryPage: React.FC = () => {
                   >
                     No matching transactions found.
                   </td>
-
                 </tr>
-
               ) : (
-
                 filteredTransactions.map((tx) => (
-
                   <tr
                     key={tx.id}
                     className="
@@ -506,7 +399,6 @@ export const TransactionHistoryPage: React.FC = () => {
                       transition-colors
                     "
                   >
-
                     <td
                       className="
                         px-6
@@ -529,9 +421,7 @@ export const TransactionHistoryPage: React.FC = () => {
                         text-slate-600
                       "
                     >
-                      {tx.patient_name ||
-                        tx.customer_name ||
-                        'Walk-in / Guest'}
+                      {tx.patient_name || tx.customer_name || "Walk-in / Guest"}
                     </td>
 
                     <td
@@ -544,10 +434,7 @@ export const TransactionHistoryPage: React.FC = () => {
                         font-semibold
                       "
                     >
-                      ₱
-                      {Number(
-                        tx.total_amount
-                      ).toFixed(2)}
+                      ₱{Number(tx.total_amount).toFixed(2)}
                     </td>
 
                     <td
@@ -559,13 +446,9 @@ export const TransactionHistoryPage: React.FC = () => {
                         text-slate-500
                       "
                     >
-                      {tx.created_at ||
-                      tx.date
-                        ? new Date(
-                            tx.created_at ||
-                            tx.date!
-                          ).toLocaleString()
-                        : 'N/A'}
+                      {tx.created_at || tx.date
+                        ? new Date(tx.created_at || tx.date!).toLocaleString()
+                        : "N/A"}
                     </td>
 
                     <td
@@ -577,12 +460,9 @@ export const TransactionHistoryPage: React.FC = () => {
                         text-sm
                       "
                     >
-
                       <button
                         type="button"
-                        onClick={() =>
-                          handleViewDetails(tx)
-                        }
+                        onClick={() => handleViewDetails(tx)}
                         className="
                           inline-flex
                           items-center
@@ -598,29 +478,17 @@ export const TransactionHistoryPage: React.FC = () => {
                           font-medium
                         "
                       >
-
                         <Eye size={14} />
 
-                        <span>
-                          View Details
-                        </span>
-
+                        <span>View Details</span>
                       </button>
-
                     </td>
-
                   </tr>
-
                 ))
-
               )}
-
             </tbody>
-
           </table>
-
         </div>
-
       </div>
 
       {/* =====================================================
@@ -629,9 +497,7 @@ export const TransactionHistoryPage: React.FC = () => {
       ===================================================== */}
 
       <div className="sm:hidden space-y-3">
-
         {loading ? (
-
           <div
             className="
               bg-white
@@ -646,9 +512,7 @@ export const TransactionHistoryPage: React.FC = () => {
           >
             Loading transactions...
           </div>
-
         ) : filteredTransactions.length === 0 ? (
-
           <div
             className="
               bg-white
@@ -663,22 +527,14 @@ export const TransactionHistoryPage: React.FC = () => {
           >
             No matching transactions found.
           </div>
-
         ) : (
-
           filteredTransactions.map((tx) => {
-
             const customerName =
-              tx.patient_name ||
-              tx.customer_name ||
-              'Walk-in / Guest';
+              tx.patient_name || tx.customer_name || "Walk-in / Guest";
 
-            const transactionDate =
-              tx.created_at ||
-              tx.date;
+            const transactionDate = tx.created_at || tx.date;
 
             return (
-
               <div
                 key={tx.id}
                 className="
@@ -690,7 +546,6 @@ export const TransactionHistoryPage: React.FC = () => {
                   overflow-hidden
                 "
               >
-
                 {/* CARD HEADER */}
 
                 <div
@@ -706,9 +561,7 @@ export const TransactionHistoryPage: React.FC = () => {
                     gap-3
                   "
                 >
-
                   <div className="min-w-0">
-
                     <p
                       className="
                         text-[10px]
@@ -731,7 +584,6 @@ export const TransactionHistoryPage: React.FC = () => {
                     >
                       #{tx.id}
                     </p>
-
                   </div>
 
                   <Receipt
@@ -741,17 +593,14 @@ export const TransactionHistoryPage: React.FC = () => {
                       shrink-0
                     "
                   />
-
                 </div>
 
                 {/* CARD BODY */}
 
                 <div className="p-4 space-y-3">
-
                   {/* CUSTOMER */}
 
                   <div>
-
                     <p
                       className="
                         text-[10px]
@@ -775,7 +624,6 @@ export const TransactionHistoryPage: React.FC = () => {
                     >
                       {customerName}
                     </p>
-
                   </div>
 
                   {/* AMOUNT + DATE */}
@@ -788,9 +636,7 @@ export const TransactionHistoryPage: React.FC = () => {
                       gap-3
                     "
                   >
-
                     <div>
-
                       <p
                         className="
                           text-[10px]
@@ -811,16 +657,11 @@ export const TransactionHistoryPage: React.FC = () => {
                           mt-0.5
                         "
                       >
-                        ₱
-                        {Number(
-                          tx.total_amount
-                        ).toFixed(2)}
+                        ₱{Number(tx.total_amount).toFixed(2)}
                       </p>
-
                     </div>
 
                     <div>
-
                       <p
                         className="
                           text-[10px]
@@ -842,16 +683,11 @@ export const TransactionHistoryPage: React.FC = () => {
                         "
                       >
                         {transactionDate
-                          ? new Date(
-                              transactionDate
-                            ).toLocaleString()
-                          : 'N/A'}
+                          ? new Date(transactionDate).toLocaleString()
+                          : "N/A"}
                       </p>
-
                     </div>
-
                   </div>
-
                 </div>
 
                 {/* CARD ACTION */}
@@ -866,12 +702,9 @@ export const TransactionHistoryPage: React.FC = () => {
                     justify-end
                   "
                 >
-
                   <button
                     type="button"
-                    onClick={() =>
-                      handleViewDetails(tx)
-                    }
+                    onClick={() => handleViewDetails(tx)}
                     className="
                       inline-flex
                       items-center
@@ -889,24 +722,15 @@ export const TransactionHistoryPage: React.FC = () => {
                       font-medium
                     "
                   >
-
                     <Eye size={14} />
 
-                    <span>
-                      View Details
-                    </span>
-
+                    <span>View Details</span>
                   </button>
-
                 </div>
-
               </div>
-
             );
           })
-
         )}
-
       </div>
 
       {/* =====================================================
@@ -914,7 +738,6 @@ export const TransactionHistoryPage: React.FC = () => {
       ===================================================== */}
 
       {activeTransaction && (
-
         <div
           className="
             fixed
@@ -929,7 +752,6 @@ export const TransactionHistoryPage: React.FC = () => {
             z-50
           "
         >
-
           <div
             className="
               bg-white
@@ -943,7 +765,6 @@ export const TransactionHistoryPage: React.FC = () => {
               flex-col
             "
           >
-
             {/* =================================================
                 MODAL HEADER
             ================================================= */}
@@ -962,7 +783,6 @@ export const TransactionHistoryPage: React.FC = () => {
                 gap-3
               "
             >
-
               <div
                 className="
                   flex
@@ -971,7 +791,6 @@ export const TransactionHistoryPage: React.FC = () => {
                   min-w-0
                 "
               >
-
                 <Receipt
                   className="
                     text-blue-600
@@ -989,17 +808,13 @@ export const TransactionHistoryPage: React.FC = () => {
                     break-words
                   "
                 >
-                  Transaction Receipt #
-                  {activeTransaction.id}
+                  Transaction Receipt #{activeTransaction.id}
                 </h3>
-
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  setActiveTransaction(null)
-                }
+                onClick={() => setActiveTransaction(null)}
                 className="
                   text-slate-400
                   hover:text-slate-600
@@ -1010,7 +825,6 @@ export const TransactionHistoryPage: React.FC = () => {
               >
                 <X size={18} />
               </button>
-
             </div>
 
             {/* =================================================
@@ -1025,7 +839,6 @@ export const TransactionHistoryPage: React.FC = () => {
                 overflow-y-auto
               "
             >
-
               {/* CUSTOMER + DATE */}
 
               <div
@@ -1042,9 +855,7 @@ export const TransactionHistoryPage: React.FC = () => {
                   border-slate-100
                 "
               >
-
                 <div className="min-w-0">
-
                   <span
                     className="
                       text-slate-500
@@ -1064,13 +875,11 @@ export const TransactionHistoryPage: React.FC = () => {
                   >
                     {activeTransaction.patient_name ||
                       activeTransaction.customer_name ||
-                      'Walk-in / Guest'}
+                      "Walk-in / Guest"}
                   </span>
-
                 </div>
 
                 <div className="min-w-0">
-
                   <span
                     className="
                       text-slate-500
@@ -1088,17 +897,14 @@ export const TransactionHistoryPage: React.FC = () => {
                       break-words
                     "
                   >
-                    {activeTransaction.created_at ||
-                    activeTransaction.date
+                    {activeTransaction.created_at || activeTransaction.date
                       ? new Date(
                           activeTransaction.created_at ||
-                          activeTransaction.date!
+                            activeTransaction.date!,
                         ).toLocaleString()
-                      : 'N/A'}
+                      : "N/A"}
                   </span>
-
                 </div>
-
               </div>
 
               {/* =================================================
@@ -1106,7 +912,6 @@ export const TransactionHistoryPage: React.FC = () => {
               ================================================= */}
 
               <div>
-
                 <h4
                   className="
                     text-xs
@@ -1130,9 +935,7 @@ export const TransactionHistoryPage: React.FC = () => {
                     overflow-y-auto
                   "
                 >
-
                   <div className="overflow-x-auto">
-
                     <table
                       className="
                         min-w-full
@@ -1141,7 +944,6 @@ export const TransactionHistoryPage: React.FC = () => {
                         text-sm
                       "
                     >
-
                       <thead
                         className="
                           bg-slate-50
@@ -1149,31 +951,18 @@ export const TransactionHistoryPage: React.FC = () => {
                           text-slate-500
                         "
                       >
-
                         <tr>
+                          <th className="px-4 py-2 text-left">Item</th>
 
-                          <th className="px-4 py-2 text-left">
-                            Item
-                          </th>
+                          <th className="px-4 py-2 text-center">Qty</th>
 
-                          <th className="px-4 py-2 text-center">
-                            Qty
-                          </th>
-
-                          <th className="px-4 py-2 text-right">
-                            Price
-                          </th>
-
+                          <th className="px-4 py-2 text-right">Price</th>
                         </tr>
-
                       </thead>
 
                       <tbody className="divide-y divide-slate-100">
-
                         {loadingItems ? (
-
                           <tr>
-
                             <td
                               colSpan={3}
                               className="
@@ -1186,42 +975,32 @@ export const TransactionHistoryPage: React.FC = () => {
                             >
                               Loading item details...
                             </td>
-
                           </tr>
-
                         ) : activeTransaction.items &&
                           activeTransaction.items.length > 0 ? (
+                          activeTransaction.items.map((item, idx) => {
+                            const itemImage =
+                              item.image_url || item.image_2d_url;
 
-                          activeTransaction.items.map(
-                            (item, idx) => {
-
-                              const itemImage =
-                                item.image_url ||
-                                item.image_2d_url;
-
-                              return (
-
-                                <tr key={idx}>
-
-                                  <td
-                                    className="
+                            return (
+                              <tr key={idx}>
+                                <td
+                                  className="
                                       px-4
                                       py-2
                                       text-slate-800
                                     "
-                                  >
-
-                                    <div
-                                      className="
+                                >
+                                  <div
+                                    className="
                                         flex
                                         items-center
                                         space-x-3
                                         min-w-[160px]
                                       "
-                                    >
-
-                                      <div
-                                        className="
+                                  >
+                                    <div
+                                      className="
                                           w-9
                                           h-9
                                           rounded-lg
@@ -1234,69 +1013,56 @@ export const TransactionHistoryPage: React.FC = () => {
                                           shrink-0
                                           overflow-hidden
                                         "
-                                      >
-
-                                        {itemImage ? (
-
-                                          <img
-                                            src={formatImageUrl(
-                                              itemImage
-                                            )}
-                                            alt={
-                                              item.item_name ||
-                                              'Item'
-                                            }
-                                            className="
+                                    >
+                                      {itemImage ? (
+                                        <img
+                                          src={formatImageUrl(itemImage)}
+                                          alt={item.item_name || "Item"}
+                                          className="
                                               w-full
                                               h-full
                                               object-cover
                                             "
-                                           onError={(e) => {
-  e.currentTarget.style.display = 'none';
-}}
-                                          />
-
-                                        ) : (
-
-                                          <Glasses
-                                            size={16}
-                                            className="
+                                          onError={(e) => {
+                                            e.currentTarget.style.display =
+                                              "none";
+                                          }}
+                                        />
+                                      ) : (
+                                        <Glasses
+                                          size={16}
+                                          className="
                                               text-slate-400
                                             "
-                                          />
+                                        />
+                                      )}
+                                    </div>
 
-                                        )}
-
-                                      </div>
-
-                                      <span
-                                        className="
+                                    <span
+                                      className="
                                           line-clamp-2
                                           break-words
                                         "
-                                      >
-                                        {item.item_name ||
-                                          'Optical Item'}
-                                      </span>
+                                    >
+                                      {item.item_name || "Optical Item"}
+                                    </span>
+                                  </div>
+                                </td>
 
-                                    </div>
-
-                                  </td>
-
-                                  <td
-                                    className="
+                                <td
+                                  className="
                                       px-4
                                       py-2
                                       text-center
                                       text-slate-600
                                       whitespace-nowrap
                                     "
-                                  >
-                                    {item.quantity}
-                                  </td>
+                                >
+                                  {item.quantity}
+                                </td>
 
-                                  <td
-                                    className="
+                                <td
+                                  className="
                                       px-4
                                       py-2
                                       text-right
@@ -1304,23 +1070,14 @@ export const TransactionHistoryPage: React.FC = () => {
                                       font-medium
                                       whitespace-nowrap
                                     "
-                                  >
-                                    ₱
-                                    {Number(
-                                      item.unit_price
-                                    ).toFixed(2)}
-                                  </td>
-
-                                </tr>
-
-                              );
-                            }
-                          )
-
+                                >
+                                  ₱{Number(item.unit_price).toFixed(2)}
+                                </td>
+                              </tr>
+                            );
+                          })
                         ) : (
-
                           <tr>
-
                             <td
                               colSpan={3}
                               className="
@@ -1333,19 +1090,12 @@ export const TransactionHistoryPage: React.FC = () => {
                             >
                               No items found for this transaction.
                             </td>
-
                           </tr>
-
                         )}
-
                       </tbody>
-
                     </table>
-
                   </div>
-
                 </div>
-
               </div>
 
               {/* =================================================
@@ -1365,7 +1115,6 @@ export const TransactionHistoryPage: React.FC = () => {
                   border-slate-200
                 "
               >
-
                 <span
                   className="
                     font-semibold
@@ -1382,14 +1131,9 @@ export const TransactionHistoryPage: React.FC = () => {
                     text-blue-600
                   "
                 >
-                  ₱
-                  {Number(
-                    activeTransaction.total_amount
-                  ).toFixed(2)}
+                  ₱{Number(activeTransaction.total_amount).toFixed(2)}
                 </span>
-
               </div>
-
             </div>
 
             {/* =================================================
@@ -1408,12 +1152,9 @@ export const TransactionHistoryPage: React.FC = () => {
                 justify-end
               "
             >
-
               <button
                 type="button"
-                onClick={() =>
-                  setActiveTransaction(null)
-                }
+                onClick={() => setActiveTransaction(null)}
                 className="
                   w-full
                   sm:w-auto
@@ -1430,15 +1171,10 @@ export const TransactionHistoryPage: React.FC = () => {
               >
                 Close
               </button>
-
             </div>
-
           </div>
-
         </div>
-
       )}
-
     </div>
   );
 };

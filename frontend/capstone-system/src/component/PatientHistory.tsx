@@ -1,16 +1,18 @@
-import { useMemo, useState, useEffect } from 'react';
-import { type Appointment } from '../services/appointmentService';
-import { prescriptionService,type Prescription} from '../services/prescriptionService';
+import { useMemo, useState, useEffect } from "react";
+import { type Appointment } from "../services/appointmentService";
+import {
+  prescriptionService,
+  type Prescription,
+} from "../services/prescriptionService";
 
 export default function PatientHistory({
   patientId,
-  allAppointments
+  allAppointments,
 }: {
   patientId: string;
   allAppointments: Appointment[];
 }) {
-  const [prescriptions, setPrescriptions] =
-    useState<Prescription[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
 
   useEffect(() => {
     if (!patientId) return;
@@ -23,17 +25,16 @@ export default function PatientHistory({
 
   const patientAppointments = useMemo(() => {
     return allAppointments
-      .filter(a => a.patient_id === patientId)
+      .filter((a) => a.patient_id === patientId)
       .sort(
         (a, b) =>
           new Date(b.appointment_date).getTime() -
-          new Date(a.appointment_date).getTime()
+          new Date(a.appointment_date).getTime(),
       );
   }, [patientId, allAppointments]);
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm w-full min-w-0">
-
       {/* =====================================================
           CLINICAL APPOINTMENT LOGS
       ===================================================== */}
@@ -44,12 +45,10 @@ export default function PatientHistory({
 
       {patientAppointments.length > 0 ? (
         <div className="space-y-3">
-
           {patientAppointments.map((appt) => (
             <div
               key={
-                appt.id ||
-                `${appt.appointment_date}-${appt.appointment_time}`
+                appt.id || `${appt.appointment_date}-${appt.appointment_time}`
               }
               className="
                 grid
@@ -65,21 +64,18 @@ export default function PatientHistory({
                 sm:gap-4
               "
             >
-
               {/* =================================================
                   DATE & TIME
               ================================================= */}
 
               <div className="sm:col-span-1 min-w-0">
-
                 <p className="text-xs font-bold text-slate-800 break-words">
-                  {appt.appointment_date.split('T')[0]}
+                  {appt.appointment_date.split("T")[0]}
                 </p>
 
                 <p className="text-[10px] text-slate-500">
                   {appt.appointment_time.substring(0, 5)}
                 </p>
-
               </div>
 
               {/* =================================================
@@ -87,7 +83,6 @@ export default function PatientHistory({
               ================================================= */}
 
               <div className="sm:col-span-2 min-w-0">
-
                 <p
                   className="
                     text-xs
@@ -99,7 +94,6 @@ export default function PatientHistory({
                 >
                   {appt.purpose_of_visit}
                 </p>
-
               </div>
 
               {/* =================================================
@@ -107,7 +101,6 @@ export default function PatientHistory({
               ================================================= */}
 
               <div className="sm:col-span-1 flex justify-start sm:justify-end">
-
                 <span
                   className={`
                     inline-flex
@@ -120,25 +113,19 @@ export default function PatientHistory({
                     uppercase
                     whitespace-nowrap
                     ${
-                      appt.appointment_status ===
-                      'Cancelled'
-                        ? 'bg-red-100 text-red-600'
-                        : appt.appointment_status ===
-                          'Completed'
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'bg-emerald-100 text-emerald-600'
+                      appt.appointment_status === "Cancelled"
+                        ? "bg-red-100 text-red-600"
+                        : appt.appointment_status === "Completed"
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-emerald-100 text-emerald-600"
                     }
                   `}
                 >
-                  {appt.appointment_status ||
-                    'Pending'}
+                  {appt.appointment_status || "Pending"}
                 </span>
-
               </div>
-
             </div>
           ))}
-
         </div>
       ) : (
         <p className="text-xs text-slate-400 italic">
@@ -156,7 +143,6 @@ export default function PatientHistory({
 
       {prescriptions.length > 0 ? (
         <div className="space-y-3">
-
           {prescriptions.map((rx) => (
             <div
               key={rx.prescription_id}
@@ -169,7 +155,6 @@ export default function PatientHistory({
                 text-xs
               "
             >
-
               {/* =================================================
                   PRESCRIPTION VALUES
               ================================================= */}
@@ -184,35 +169,21 @@ export default function PatientHistory({
                   mb-1
                 "
               >
-
                 <span className="text-slate-400 min-w-0">
-                  OD SPH:{' '}
-                  <b className="text-slate-700">
-                    {rx.od_sph || '—'}
-                  </b>
+                  OD SPH: <b className="text-slate-700">{rx.od_sph || "—"}</b>
                 </span>
 
                 <span className="text-slate-400 min-w-0">
-                  OD CYL:{' '}
-                  <b className="text-slate-700">
-                    {rx.od_cyl || '—'}
-                  </b>
+                  OD CYL: <b className="text-slate-700">{rx.od_cyl || "—"}</b>
                 </span>
 
                 <span className="text-slate-400 min-w-0">
-                  OS SPH:{' '}
-                  <b className="text-slate-700">
-                    {rx.os_sph || '—'}
-                  </b>
+                  OS SPH: <b className="text-slate-700">{rx.os_sph || "—"}</b>
                 </span>
 
                 <span className="text-slate-400 min-w-0">
-                  OS CYL:{' '}
-                  <b className="text-slate-700">
-                    {rx.os_cyl || '—'}
-                  </b>
+                  OS CYL: <b className="text-slate-700">{rx.os_cyl || "—"}</b>
                 </span>
-
               </div>
 
               {rx.notes && (
@@ -220,17 +191,14 @@ export default function PatientHistory({
                   {rx.notes}
                 </p>
               )}
-
             </div>
           ))}
-
         </div>
       ) : (
         <p className="text-xs text-slate-400 italic">
           No prescription records found for this ID.
         </p>
       )}
-
     </div>
   );
 }
