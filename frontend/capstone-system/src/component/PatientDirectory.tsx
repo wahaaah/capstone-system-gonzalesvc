@@ -1,9 +1,10 @@
 // src/components/PatientDirectory.tsx
 import { useState, useEffect } from 'react';
-import { Search, Eye, UserX, Plus, Pencil, Trash2, X, Loader2, FilePlus2, ShoppingBag, Maximize2, Receipt } from 'lucide-react';
+import { Search, Eye, UserX, Plus, Trash2, X, Loader2, FilePlus2, ShoppingBag, Maximize2, Receipt } from 'lucide-react';
 import { patientService, type Patient } from '../services/patientService';
 import { prescriptionService, type Prescription } from '../services/prescriptionService';
 import { posService, type PatientTransaction } from '../services/posService';
+import { appointmentService, type Appointment } from '../services/appointmentService';
 
 export default function PatientDirectory() {
   // 1. Data Core State
@@ -12,6 +13,7 @@ export default function PatientDirectory() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   // Prescription Data State
   const [activePrescription, setActivePrescription] = useState<Prescription | null>(null);
@@ -23,7 +25,6 @@ export default function PatientDirectory() {
 
   // 2. Modal Interface System States
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [isRefractionModalOpen, setIsRefractionModalOpen] = useState(false);
   const [isTxModalOpen, setIsTxModalOpen] = useState(false); // Modal state for transaction history
   
@@ -33,7 +34,6 @@ export default function PatientDirectory() {
   const [formAge, setFormAge] = useState('');
   const [formGender, setFormGender] = useState('Male');
   const [formContact, setFormContact] = useState('');
-  const [formStatus, setFormStatus] = useState<'Active' | 'Pending' | 'Completed'>('Active');
 
   const [odSph, setOdSph] = useState('');
   const [odCyl, setOdCyl] = useState('');
@@ -61,13 +61,51 @@ export default function PatientDirectory() {
   const fetchLiveRecords = async () => {
     setIsLoading(true);
     try {
-      const liveData = await patientService.getAll();
+      const [liveData, appointmentData] = await Promise.all([
+        patientService.getAll(),
+        appointmentService.getAll(),
+      ]);
+
       setPatients(liveData);
+      setAppointments(appointmentData);
     } catch (error) {
       console.error("Could not fetch database records:", error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Last Visit is based only on an appointment that was actually completed.
+  // Future/pending/confirmed appointments must never become a patient's last visit.
+  const getLastVisit = (patientId: string) => {
+    const completedVisits = appointments
+      .filter((appointment) => {
+        const status = String(appointment.appointment_status || '').trim().toLowerCase();
+        const appointmentPatientId = String(appointment.patient_id || '').trim();
+        return appointmentPatientId === patientId && status === 'completed';
+      })
+      .sort((a, b) => {
+        const dateA = `${a.appointment_date || ''}T${a.appointment_time || '00:00:00'}`;
+        const dateB = `${b.appointment_date || ''}T${b.appointment_time || '00:00:00'}`;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      });
+
+    if (completedVisits.length === 0) {
+      return 'Not yet recorded';
+    }
+
+    const latest = completedVisits[0];
+    const dateValue = String(latest.appointment_date || '').split('T')[0];
+
+    if (!dateValue) {
+      return 'Not yet recorded';
+    }
+
+    return new Date(`${dateValue}T00:00:00`).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
   const fetchPrescription = async (patientId: string) => {
@@ -102,30 +140,17 @@ export default function PatientDirectory() {
   );
 
   const handleOpenAddModal = () => {
-    setModalMode('add');
     setFormId(`GVC-${Math.floor(1000 + Math.random() * 9000)}`);
     setFormName('');
     setFormAge('');
     setFormGender('Male');
     setFormContact('');
-    setFormStatus('Active');
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (patient: Patient, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setModalMode('edit');
-    setFormId(patient.patient_id);
-    setFormName(patient.name);
-    setFormAge(patient.age.toString());
-    setFormGender(patient.gender);
-    setFormContact(patient.contact);
-    setFormStatus(patient.status);
     setIsModalOpen(true);
   };
 
   const handleSavePatient = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!formName.trim() || !formAge || !formContact.trim()) {
       alert("Please fill in all required fields.");
       return;
@@ -137,39 +162,22 @@ export default function PatientDirectory() {
       age: parseInt(formAge),
       gender: formGender,
       contact: formContact.trim(),
-      last_visit: modalMode === 'add' ? 'Not yet recorded' : (selectedPatient?.last_visit || 'Not yet recorded'),
-      status: formStatus,
+      // Kept only for compatibility with the existing Patient type/database.
+      // Patient status is no longer displayed or manually edited in the UI.
+      status: 'Active',
+      last_visit: 'Not yet recorded',
     };
 
     setIsSubmitting(true);
 
     try {
-      if (modalMode === 'add') {
-        const freshDatabaseRow = await patientService.create(payload);
-        setPatients(prev => [freshDatabaseRow, ...prev]);
-        setSelectedPatient(freshDatabaseRow);
-      } else {
-        const modifiedRow = await patientService.update(formId, payload);
-        setPatients(prev => prev.map(p => p.patient_id === formId ? modifiedRow : p));
-
-        if (formStatus === 'Completed') {
-          const pendingTxs = patientTransactions.filter(tx => tx.payment_status === 'Pending');
-          if (pendingTxs.length > 0) {
-            await Promise.all(
-              pendingTxs.map(tx => posService.updateTransactionStatus(tx.transaction_id, 'Paid'))
-            );
-          }
-        }
-
-        if (selectedPatient?.patient_id === formId) {
-          setSelectedPatient(modifiedRow);
-          await fetchTransactions(formId);
-        }
-      }
+      const freshDatabaseRow = await patientService.create(payload);
+      setPatients(prev => [freshDatabaseRow, ...prev]);
+      setSelectedPatient(freshDatabaseRow);
       setIsModalOpen(false);
     } catch (error) {
       console.error("Save sequence error:", error);
-      alert("Database write error occurred during save sequence.");
+      alert("Database write error occurred during registration.");
     } finally {
       setIsSubmitting(false);
     }
@@ -266,20 +274,14 @@ export default function PatientDirectory() {
             </div>
           )}
 
-          {/* =====================================================
-              DESKTOP PATIENT TABLE
-              Hidden on small screens so the records do not
-              become horizontally squeezed.
-          ===================================================== */}
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-500 font-medium">
                   <th className="p-4">Patient ID</th>
                   <th className="p-4">Name</th>
                   <th className="p-4">Age / Sex</th>
                   <th className="p-4">Last Visit</th>
-                  <th className="p-4">Status</th>
                   <th className="p-4 text-right pr-6">Actions</th>
                 </tr>
               </thead>
@@ -290,18 +292,7 @@ export default function PatientDirectory() {
                       <td className="p-4 font-bold text-blue-600">{patient.patient_id}</td>
                       <td className="p-4 font-medium text-slate-900">{patient.name}</td>
                       <td className="p-4 text-slate-600">{patient.age} yrs / {patient.gender}</td>
-                      <td className="p-4 text-slate-500 font-mono text-xs">{patient.last_visit}</td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          patient.status === 'Active'
-                            ? 'bg-green-50 text-green-700 border border-green-200'
-                            : patient.status === 'Pending'
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'bg-slate-100 text-slate-700 border border-slate-200'
-                        }`}>
-                          {patient.status}
-                        </span>
-                      </td>
+                      <td className="p-4 text-slate-500 font-mono text-xs">{getLastVisit(patient.patient_id)}</td>
                       <td className="p-4 text-right pr-6 space-x-1">
                         <button
                           onClick={() => setSelectedPatient(patient)}
@@ -309,13 +300,6 @@ export default function PatientDirectory() {
                           title="Open Clinical Preview"
                         >
                           <Eye size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => handleOpenEditModal(patient, e)}
-                          className="inline-flex items-center text-slate-500 hover:text-amber-600 p-1.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
-                          title="Modify Account Properties"
-                        >
-                          <Pencil size={16} />
                         </button>
                         <button
                           onClick={(e) => handleDeletePatient(patient.patient_id, e)}
@@ -329,7 +313,7 @@ export default function PatientDirectory() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-slate-400">
+                    <td colSpan={5} className="p-8 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <UserX size={24} className="text-slate-300" />
                         <span>No matched patient indexes found in MariaDB.</span>
@@ -339,103 +323,6 @@ export default function PatientDirectory() {
                 )}
               </tbody>
             </table>
-          </div>
-
-          {/* =====================================================
-              MOBILE PATIENT CARDS
-              Replaces the wide table on phones.
-          ===================================================== */}
-          <div className="sm:hidden p-3 space-y-3">
-            {filteredPatients.length > 0 ? (
-              filteredPatients.map((patient) => (
-                <div
-                  key={patient.patient_id}
-                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-                >
-                  {/* Patient name + status */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-blue-600">
-                        {patient.patient_id}
-                      </p>
-                      <p className="mt-1 text-sm font-bold text-slate-900 break-words">
-                        {patient.name}
-                      </p>
-                    </div>
-
-                    <span className={`shrink-0 inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold ${
-                      patient.status === 'Active'
-                        ? 'bg-green-50 text-green-700 border border-green-200'
-                        : patient.status === 'Pending'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-slate-100 text-slate-700 border border-slate-200'
-                    }`}>
-                      {patient.status}
-                    </span>
-                  </div>
-
-                  {/* Patient details */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-4 pt-3 border-t border-slate-100">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                        Age / Sex
-                      </p>
-                      <p className="mt-1 text-xs text-slate-700 break-words">
-                        {patient.age} yrs / {patient.gender}
-                      </p>
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                        Last Visit
-                      </p>
-                      <p className="mt-1 text-xs text-slate-600 break-words">
-                        {patient.last_visit || 'No visits'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
-                    <button
-                      onClick={() => setSelectedPatient(patient)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer"
-                      title="Open Clinical Preview"
-                    >
-                      <Eye size={14} />
-                      <span>View</span>
-                    </button>
-
-                    <button
-                      onClick={(e) => handleOpenEditModal(patient, e)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer"
-                      title="Modify Account Properties"
-                    >
-                      <Pencil size={14} />
-                      <span>Edit</span>
-                    </button>
-
-                    <button
-                      onClick={(e) => handleDeletePatient(patient.patient_id, e)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
-                      title="Purge Profile"
-                    >
-                      <Trash2 size={14} />
-                      <span>Delete</span>
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-8 text-center text-slate-400">
-                <div className="flex flex-col items-center justify-center space-y-2">
-                  <UserX size={24} className="text-slate-300" />
-                  <span className="text-xs">
-                    No matched patient indexes found in MariaDB.
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
           <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 text-xs text-slate-400 font-medium">
             Live Row Target Context: {filteredPatients.length} profiles loaded from schema
@@ -599,13 +486,13 @@ export default function PatientDirectory() {
         </div>
       </div>
 
-      {/* 1. Register / Edit Patient Modal */}
+      {/* 1. Register New Patient Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
               <h3 className="font-bold text-slate-900">
-                {modalMode === 'add' ? 'Register New Patient Account' : `Modify Metadata File: ${formId}`}
+Register New Patient Account
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X size={18} />
@@ -660,18 +547,6 @@ export default function PatientDirectory() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Operational State Classification</label>
-                <select 
-                  value={formStatus}
-                  onChange={(e) => setFormStatus(e.target.value as 'Active' | 'Pending' | 'Completed')}
-                  className="w-full text-sm border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Completed">Completed</option>
-                </select>
-              </div>
 
               <div className="flex space-x-3 pt-4 border-t border-slate-100 justify-end text-sm">
                 <button 
